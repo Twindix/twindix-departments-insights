@@ -23,7 +23,7 @@ export function DashboardLayout() {
                     <Outlet />
                 </main>
                 <footer className="py-4 text-center text-xs text-[var(--color-text-muted)] border-t border-[var(--color-border)]">
-                    طُوّر بـ <span className="animate-heartbeat inline-block text-[var(--color-error)]">❤️</span> بواسطة <a href="https://hawary.dev" target="_blank" rel="noopener noreferrer" className="text-[var(--color-primary)] hover:underline">Mohamed Elhawary</a>
+                    طُوّر بواسطة <a href="https://twindix.com" target="_blank" rel="noopener noreferrer" className="text-[var(--color-primary)] hover:underline" dir="ltr">Twindix Global Inc.</a>
                 </footer>
             </div>
         </div>

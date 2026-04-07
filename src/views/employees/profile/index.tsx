@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import {
-    ArrowRight,
+    ArrowLeft,
     ClipboardList,
     CheckCircle2,
     XCircle,
@@ -9,12 +9,26 @@ import {
     TrendingUp,
     Eye,
     CalendarDays,
+    User,
+    Briefcase,
+    GraduationCap,
+    Award,
+    BookOpen,
+    Phone,
+    Mail,
+    MapPin,
+    Hash,
+    Heart,
+    Shield,
+    Baby,
+    Sparkles,
 } from "lucide-react";
-import { Header, StatCard, ProgressBar, DatePicker, MemberProfileSkeleton } from "@/components/shared";
+import { Header, StatCard, ProgressBar, DatePicker, EmployeeProfileSkeleton } from "@/components/shared";
 import { Button, Card, CardHeader, CardTitle, CardContent, Badge } from "@/atoms";
-import { useSettings, useDeferredLoad } from "@/hooks";
-import { getMemberInsightsPath } from "@/data";
-import { seedDepartmentRecords, seedMembers } from "@/data/seed";
+import { useSettings, useDeferredLoad, usePageTitle } from "@/hooks";
+import { getEmployeeInsightsPath } from "@/data";
+import { seedDepartmentRecords, seedEmployees, seedEmployeeCvs } from "@/data/seed";
+import { getTenureInfo } from "@/utils";
 
 interface ChartPoint {
     x: number;
@@ -26,9 +40,11 @@ interface ChartPoint {
 function TrendChart({
     points,
     formatDate,
+    viewMode,
 }: {
     points: ChartPoint[];
     formatDate: (d: string, f?: "short" | "long" | "iso") => string;
+    viewMode: ViewMode;
 }) {
     const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
     const overlayRef = useRef<HTMLDivElement>(null);
@@ -142,12 +158,17 @@ function TrendChart({
                     {mapped.map((p, i) => {
                         const showLabel = mapped.length <= 7 || i % 2 === 0 || i === mapped.length - 1;
                         if (!showLabel) return null;
-                        const d = new Date(p.date);
-                        const label = `${d.getDate()}/${d.getMonth() + 1}`;
+                        let label: string;
+                        if (viewMode === "daily") {
+                            const d = new Date(p.date);
+                            label = `${d.getDate()}/${d.getMonth() + 1}`;
+                        } else {
+                            label = formatGroupKey(p.date, viewMode);
+                        }
                         return (
                             <div
                                 key={`x-${i}`}
-                                className="absolute text-xs font-medium text-[var(--color-text-muted)] tabular-nums whitespace-nowrap"
+                                className="absolute text-[10px] font-medium text-[var(--color-text-muted)] tabular-nums whitespace-nowrap"
                                 style={{
                                     bottom: 0,
                                     right: `${p.pctX - 1.5}%`,
@@ -291,10 +312,10 @@ function TrendChart({
     );
 }
 
-type DatePreset = "6d" | "15d" | "1m" | "3m" | "6m" | "1y" | "3y" | "custom";
+type DatePreset = "7d" | "15d" | "1m" | "3m" | "6m" | "1y" | "3y" | "custom";
 
 const DATE_PRESETS: { value: DatePreset; label: string }[] = [
-    { value: "6d", label: "آخر ٦ أيام" },
+    { value: "7d", label: "آخر أسبوع" },
     { value: "15d", label: "آخر ١٥ يوم" },
     { value: "1m", label: "آخر شهر" },
     { value: "3m", label: "آخر ٣ أشهر" },
@@ -307,7 +328,7 @@ const DATE_PRESETS: { value: DatePreset; label: string }[] = [
 function getPresetStartDate(preset: DatePreset, lastDate: string): string {
     const end = new Date(lastDate);
     switch (preset) {
-        case "6d": { const d = new Date(end); d.setDate(d.getDate() - 6); return d.toISOString().split("T")[0]; }
+        case "7d": { const d = new Date(end); d.setDate(d.getDate() - 7); return d.toISOString().split("T")[0]; }
         case "15d": { const d = new Date(end); d.setDate(d.getDate() - 15); return d.toISOString().split("T")[0]; }
         case "1m": { const d = new Date(end); d.setMonth(d.getMonth() - 1); return d.toISOString().split("T")[0]; }
         case "3m": { const d = new Date(end); d.setMonth(d.getMonth() - 3); return d.toISOString().split("T")[0]; }
@@ -431,12 +452,12 @@ function aggregateRecords(records: { totalTasks: number; executedTasks: number; 
 function ViewModeSelector({ mode, onChange, availableModes }: { mode: ViewMode; onChange: (m: ViewMode) => void; availableModes: ViewMode[] }) {
     if (availableModes.length <= 1) return null;
     return (
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
             {availableModes.map((m) => (
                 <button
                     key={m}
                     onClick={() => onChange(m)}
-                    className={`px-2 py-1 text-[10px] rounded-md cursor-pointer transition-colors ${
+                    className={`px-3 py-1.5 text-xs rounded-md cursor-pointer transition-colors ${
                         mode === m
                             ? "bg-[var(--color-primary)] text-white"
                             : "bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-hover)]"
@@ -449,19 +470,22 @@ function ViewModeSelector({ mode, onChange, availableModes }: { mode: ViewMode; 
     );
 }
 
-export function MemberProfileView() {
+export function EmployeeProfileView() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
     const { formatDate } = useSettings();
     const isReady = useDeferredLoad(150);
+    usePageTitle("ملف الموظف");
 
-    const members = seedMembers;
+    const employees = seedEmployees;
     const allRecords = seedDepartmentRecords;
-    const member = members.find((m) => m.id === id);
+    const employee = employees.find((m) => m.id === id);
+    const cv = seedEmployeeCvs.find((c) => c.employeeId === id);
     const records = useMemo(
         () =>
             allRecords
-                .filter((r) => r.memberId === id)
+                .filter((r) => r.employeeId === id)
                 .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()),
         [allRecords, id]
     );
@@ -473,50 +497,117 @@ export function MemberProfileView() {
 
     const lastDate = allUniqueDates[allUniqueDates.length - 1] ?? new Date().toISOString().split("T")[0];
 
-    // Date range state
-    const [preset, setPreset] = useState<DatePreset>("6d");
-    const [startDate, setStartDate] = useState<string>(() => getPresetStartDate("6d", lastDate));
-    const [endDate, setEndDate] = useState<string>(lastDate);
-    const [cardsPage, setCardsPage] = useState(1);
+    // Last-7-days performance — used for badges (stable, not affected by date filter)
+    const lastWeekPerformance = useMemo(() => {
+        const now = new Date();
+        const weekAgo = new Date(now);
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        const weekAgoMs = weekAgo.getTime();
+        const active = records.filter((r) => r.executedWorkPercentage > 0 && new Date(r.date).getTime() >= weekAgoMs);
+        if (active.length === 0) return 0;
+        return Math.round((active.reduce((s, r) => s + r.executedWorkPercentage, 0) / active.length) * 100);
+    }, [records]);
+
+    // Date range state — persisted in URL search params
+    const urlPreset = (searchParams.get("preset") || "7d") as DatePreset;
+    const urlFrom = searchParams.get("from");
+    const urlTo = searchParams.get("to");
+
+    const initStart = urlPreset === "custom" && urlFrom ? urlFrom : getPresetStartDate(urlPreset, lastDate);
+    const initEnd = urlPreset === "custom" && urlTo ? urlTo : lastDate;
+
+    const [preset, setPresetRaw] = useState<DatePreset>(urlPreset);
+    const [startDate, setStartDateRaw] = useState<string>(initStart);
+    const [endDate, setEndDateRaw] = useState<string>(initEnd);
+
+
+    const syncUrl = useCallback((p: DatePreset, from: string, to: string) => {
+        setSearchParams((prev) => {
+            prev.set("preset", p);
+            if (p === "custom") {
+                prev.set("from", from);
+                prev.set("to", to);
+            } else {
+                prev.delete("from");
+                prev.delete("to");
+            }
+            // Reset all section pages when date range changes
+            prev.delete("tp");
+            prev.delete("hp");
+            prev.delete("cp");
+            return prev;
+        }, { replace: true });
+    }, [setSearchParams]);
 
     const handlePreset = useCallback(
         (p: DatePreset) => {
-            setPreset(p);
-            setCardsPage(1);
-            setTasksPage(1);
-            setHoursPage(1);
+            setPresetRaw(p);
             if (p !== "custom") {
-                setStartDate(getPresetStartDate(p, lastDate));
-                setEndDate(lastDate);
+                const newStart = getPresetStartDate(p, lastDate);
+                setStartDateRaw(newStart);
+                setEndDateRaw(lastDate);
+                syncUrl(p, newStart, lastDate);
+            } else {
+                syncUrl(p, startDate, endDate);
             }
         },
-        [lastDate]
+        [lastDate, syncUrl, startDate, endDate]
     );
 
     const handleStartDate = useCallback((val: string) => {
-        setStartDate(val);
-        setPreset("custom");
-        setCardsPage(1);
-        setTasksPage(1);
-        setHoursPage(1);
-    }, []);
+        setStartDateRaw(val);
+        setPresetRaw("custom");
+        syncUrl("custom", val, endDate);
+    }, [syncUrl, endDate]);
 
     const handleEndDate = useCallback((val: string) => {
-        setEndDate(val);
-        setPreset("custom");
-        setCardsPage(1);
-        setTasksPage(1);
-        setHoursPage(1);
-    }, []);
+        setEndDateRaw(val);
+        setPresetRaw("custom");
+        syncUrl("custom", startDate, val);
+    }, [syncUrl, startDate]);
 
     const isCustom = preset === "custom";
     const minCustom = getMinCustomDate(lastDate);
-    const [tasksPage, setTasksPage] = useState(1);
-    const [hoursPage, setHoursPage] = useState(1);
-    const [chartViewMode, setChartViewMode] = useState<ViewMode>("daily");
-    const [tasksViewMode, setTasksViewMode] = useState<ViewMode>("daily");
-    const [hoursViewMode, setHoursViewMode] = useState<ViewMode>("daily");
-    const [cardsViewMode, setCardsViewMode] = useState<ViewMode>("daily");
+
+    // Helper to read/write URL params for section state
+    const getParam = (key: string, fallback: string) => searchParams.get(key) || fallback;
+    const setParams = useCallback((updates: Record<string, string>) => {
+        setSearchParams((prev) => {
+            for (const [key, value] of Object.entries(updates)) {
+                if (value === "" || value === "0") {
+                    prev.delete(key);
+                } else {
+                    prev.set(key, value);
+                }
+            }
+            return prev;
+        }, { replace: true });
+    }, [setSearchParams]);
+
+    // Section pages — persisted in URL
+    const tasksPage = Number(getParam("tp", "1"));
+    const setTasksPage = (v: number | ((p: number) => number)) => {
+        const val = typeof v === "function" ? v(tasksPage) : v;
+        setParams({ tp: String(val) });
+    };
+    const hoursPage = Number(getParam("hp", "1"));
+    const setHoursPage = (v: number | ((p: number) => number)) => {
+        const val = typeof v === "function" ? v(hoursPage) : v;
+        setParams({ hp: String(val) });
+    };
+    const cardsPageVal = Number(getParam("cp", "1"));
+    const setCardsPageVal = (v: number | ((p: number) => number)) => {
+        const val = typeof v === "function" ? v(cardsPageVal) : v;
+        setParams({ cp: String(val) });
+    };
+
+    // Section view modes — persisted in URL
+    const chartViewMode = (getParam("chartMode", "daily")) as ViewMode;
+    const setChartViewMode = (m: ViewMode) => setParams({ chartMode: m });
+    const tasksViewMode = (getParam("tasksMode", "daily")) as ViewMode;
+    const hoursViewMode = (getParam("hoursMode", "daily")) as ViewMode;
+    const cardsViewMode = (getParam("cardsMode", "daily")) as ViewMode;
+
     const SECTION_PAGE_SIZE = 10;
 
     // Filtered records based on date range
@@ -537,10 +628,11 @@ export function MemberProfileView() {
     );
 
     // Computed stats from filtered records
-    const activeRecords = useMemo(
-        () => filteredRecords.filter((r) => r.totalTasks > 0),
-        [filteredRecords]
-    );
+    const filteredAvgPerformance = useMemo(() => {
+        const active = filteredRecords.filter((r) => r.executedWorkPercentage > 0);
+        if (active.length === 0) return 0;
+        return Math.round((active.reduce((s, r) => s + r.executedWorkPercentage, 0) / active.length) * 100);
+    }, [filteredRecords]);
 
     const totalTasks = useMemo(
         () => filteredRecords.reduce((s, r) => s + r.totalTasks, 0),
@@ -562,20 +654,7 @@ export function MemberProfileView() {
         [filteredRecords]
     );
 
-    const avgPerformance = useMemo(
-        () =>
-            activeRecords.length > 0
-                ? Math.round(
-                      (activeRecords.reduce(
-                          (s, r) => s + r.executedWorkPercentage,
-                          0
-                      ) /
-                          activeRecords.length) *
-                          100
-                  )
-                : 0,
-        [activeRecords]
-    );
+
 
     // Chart points from filtered active records
     // Available view modes based on selected date range
@@ -589,16 +668,20 @@ export function MemberProfileView() {
         const groups = groupDatesByMode(uniqueDates, chartViewMode);
         const points: ChartPoint[] = [];
         const entries = Array.from(groups.entries());
-        entries.forEach(([key, dates], i) => {
+        entries.forEach(([key, dates]) => {
             const recs = dates.flatMap((dt) => filteredRecords.filter((r) => r.date === dt && r.totalTasks > 0));
             if (recs.length === 0) return;
             const avg = recs.reduce((s, r) => s + r.executedWorkPercentage, 0) / recs.length;
             points.push({
-                x: (i / Math.max(entries.length - 1, 1)) * 100,
+                x: 0, // will be re-normalized below
                 y: 100 - avg * 100,
                 date: chartViewMode === "daily" ? dates[0] : key,
                 value: Math.round(avg * 100),
             });
+        });
+        // Re-normalize x positions to ensure points span 0-100 evenly
+        points.forEach((p, idx) => {
+            p.x = (idx / Math.max(points.length - 1, 1)) * 100;
         });
         return points;
     }, [uniqueDates, chartViewMode, filteredRecords]);
@@ -620,7 +703,7 @@ export function MemberProfileView() {
             const recs = dates.flatMap((dt) => filteredRecords.filter((r) => r.date === dt));
             const agg = aggregateRecords(recs);
             return { key, label: hoursViewMode === "daily" ? dates[0] : key, agg };
-        });
+        }).filter(({ agg }) => agg.dailyWorkHours > 0);
     }, [uniqueDates, hoursViewMode, filteredRecords]);
 
     const groupedForCards = useMemo(() => {
@@ -632,9 +715,9 @@ export function MemberProfileView() {
         });
     }, [uniqueDates, cardsViewMode, filteredRecords]);
 
-    if (!isReady) return <MemberProfileSkeleton />;
+    if (!isReady) return <EmployeeProfileSkeleton />;
 
-    if (!member) {
+    if (!employee) {
         return (
             <div className="flex items-center justify-center py-20 text-[var(--color-text-muted)]">
                 لم يتم العثور على الموظف
@@ -642,16 +725,42 @@ export function MemberProfileView() {
         );
     }
 
+    const tenure = getTenureInfo(employee.joiningDate);
+
     return (
         <div className="space-y-6 animate-fade-in">
             <Header
-                title={`ملف الموظف - ${member.name}`}
-                description={`${member.role} | ${member.subDepartmentName}`}
+                title={
+                    <span className="flex items-center gap-2 flex-wrap">
+                        {`ملف الموظف - ${employee.name}`}
+                        {tenure.isNewJoiner && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-400 animate-pulse">
+                                موظف جديد
+                            </span>
+                        )}
+                        {tenure.isSenior && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/15 text-amber-400 badge-shimmer">
+                                موظف قديم
+                            </span>
+                        )}
+                        {lastWeekPerformance >= 90 && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-yellow-500/15 text-yellow-400 badge-star">
+                                موظف متفوق
+                            </span>
+                        )}
+                        {lastWeekPerformance > 0 && lastWeekPerformance < 50 && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-red-500/15 text-red-400 badge-low">
+                                أداء منخفض
+                            </span>
+                        )}
+                    </span>
+                }
+                description={`${employee.role} | ${employee.subDepartmentName} | تاريخ الانضمام: ${formatDate(employee.joiningDate)} (${tenure.label})`}
                 actions={
                     <div className="flex items-center gap-2">
                         <Button
                             onClick={() =>
-                                navigate(getMemberInsightsPath(member.id), { state: { from: "profile" } })
+                                navigate(getEmployeeInsightsPath(employee.id), { state: { from: "profile" } })
                             }
                             className="gap-2"
                         >
@@ -663,7 +772,7 @@ export function MemberProfileView() {
                             onClick={() => navigate(-1)}
                             className="gap-2"
                         >
-                            <ArrowRight className="h-4 w-4" />
+                            <ArrowLeft className="h-4 w-4" />
                             العودة
                         </Button>
                     </div>
@@ -746,7 +855,7 @@ export function MemberProfileView() {
                 />
                 <StatCard
                     label="متوسط الأداء"
-                    value={avgPerformance}
+                    value={filteredAvgPerformance}
                     suffix="%"
                     icon={TrendingUp}
                     className="col-span-2 sm:col-span-1"
@@ -764,6 +873,7 @@ export function MemberProfileView() {
                     <TrendChart
                         points={chartPoints}
                         formatDate={(d) => chartViewMode === "daily" ? formatDate(d) : formatGroupKey(d, chartViewMode)}
+                        viewMode={chartViewMode}
                     />
                 </div>
             )}
@@ -775,7 +885,7 @@ export function MemberProfileView() {
                         <CardTitle className="text-base">تفصيل المهام</CardTitle>
                         <div className="flex items-center gap-3">
                             <span className="text-xs text-[var(--color-text-muted)]">{groupedForTasks.length} فترة</span>
-                            <ViewModeSelector mode={tasksViewMode} onChange={(m) => { setTasksViewMode(m); setTasksPage(1); }} availableModes={availableViewModes} />
+                            <ViewModeSelector mode={tasksViewMode} onChange={(m) => { setParams({ tasksMode: m, tp: "1" }); }} availableModes={availableViewModes} />
                         </div>
                     </div>
                 </CardHeader>
@@ -826,7 +936,7 @@ export function MemberProfileView() {
                         <CardTitle className="text-base">مقارنة ساعات العمل</CardTitle>
                         <div className="flex items-center gap-3">
                             <span className="text-xs text-[var(--color-text-muted)]">{groupedForHours.length} فترة</span>
-                            <ViewModeSelector mode={hoursViewMode} onChange={(m) => { setHoursViewMode(m); setHoursPage(1); }} availableModes={availableViewModes} />
+                            <ViewModeSelector mode={hoursViewMode} onChange={(m) => { setParams({ hoursMode: m, hp: "1" }); }} availableModes={availableViewModes} />
                         </div>
                     </div>
                 </CardHeader>
@@ -834,9 +944,7 @@ export function MemberProfileView() {
                     <div className="space-y-3">
                         {groupedForHours
                             .slice((hoursPage - 1) * SECTION_PAGE_SIZE, hoursPage * SECTION_PAGE_SIZE)
-                            .map(({ key, label, agg }) => {
-                            if (agg.dailyWorkHours === 0) return null;
-                            return (
+                            .map(({ key, label, agg }) => (
                                 <div key={key} className="space-y-1">
                                     <div className="flex items-center justify-between text-xs">
                                         <span className="text-[var(--color-text-muted)]">
@@ -850,8 +958,7 @@ export function MemberProfileView() {
                                         <div className="h-full bg-[var(--color-info)] rounded-full transition-all duration-1000" style={{ width: `${(agg.actualHours / agg.dailyWorkHours) * 100}%` }} />
                                     </div>
                                 </div>
-                            );
-                        })}
+                            ))}
                     </div>
                     {groupedForHours.length > SECTION_PAGE_SIZE && (
                         <div className="flex items-center justify-center gap-2 mt-4">
@@ -872,12 +979,12 @@ export function MemberProfileView() {
                     </h2>
                     <div className="flex items-center gap-3">
                         <span className="text-xs text-[var(--color-text-muted)]">{groupedForCards.length} فترة</span>
-                        <ViewModeSelector mode={cardsViewMode} onChange={(m) => { setCardsViewMode(m); setCardsPage(1); }} availableModes={availableViewModes} />
+                        <ViewModeSelector mode={cardsViewMode} onChange={(m) => { setParams({ cardsMode: m, cp: "1" }); }} availableModes={availableViewModes} />
                     </div>
                 </div>
                 <div className="grid gap-4 md:grid-cols-2">
                     {groupedForCards
-                        .slice((cardsPage - 1) * CARDS_PER_PAGE, cardsPage * CARDS_PER_PAGE)
+                        .slice((cardsPageVal - 1) * CARDS_PER_PAGE, cardsPageVal * CARDS_PER_PAGE)
                         .map(({ key, label, agg }) => (
                             <Card key={key} className="hover-lift">
                                 <CardHeader className="pb-3">
@@ -912,12 +1019,222 @@ export function MemberProfileView() {
 
                 {groupedForCards.length > CARDS_PER_PAGE && (
                     <div className="flex items-center justify-center gap-2 mt-4">
-                        <Button variant="outline" size="sm" disabled={cardsPage <= 1} onClick={() => setCardsPage((p) => p - 1)}>السابق</Button>
-                        <span className="text-sm text-[var(--color-text-muted)] tabular-nums px-2">{cardsPage} / {Math.ceil(groupedForCards.length / CARDS_PER_PAGE)}</span>
-                        <Button variant="outline" size="sm" disabled={cardsPage >= Math.ceil(groupedForCards.length / CARDS_PER_PAGE)} onClick={() => setCardsPage((p) => p + 1)}>التالي</Button>
+                        <Button variant="outline" size="sm" disabled={cardsPageVal <= 1} onClick={() => setCardsPageVal((p) => p - 1)}>السابق</Button>
+                        <span className="text-sm text-[var(--color-text-muted)] tabular-nums px-2">{cardsPageVal} / {Math.ceil(groupedForCards.length / CARDS_PER_PAGE)}</span>
+                        <Button variant="outline" size="sm" disabled={cardsPageVal >= Math.ceil(groupedForCards.length / CARDS_PER_PAGE)} onClick={() => setCardsPageVal((p) => p + 1)}>التالي</Button>
                     </div>
                 )}
             </div>
+
+            {/* ── Employee CV / Resume Section ── */}
+            {cv && (
+                <div>
+                    <h2 className="text-lg font-semibold text-[var(--color-text-dark)] flex items-center gap-2 mb-4">
+                        <User className="h-5 w-5" />
+                        السيرة الذاتية
+                    </h2>
+
+                    {/* Personal Info Grid */}
+                    <Card className="mb-4">
+                        <CardHeader>
+                            <CardTitle className="text-base flex items-center gap-2">
+                                <Hash className="h-4 w-4 text-[var(--color-primary)]" />
+                                البيانات الشخصية
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <div className="flex items-center gap-2 text-sm">
+                                    <User className="h-4 w-4 text-[var(--color-text-muted)] shrink-0" />
+                                    <span className="text-[var(--color-text-muted)]">الجنس:</span>
+                                    <span className="font-medium">{cv.gender}</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-sm">
+                                    <CalendarDays className="h-4 w-4 text-[var(--color-text-muted)] shrink-0" />
+                                    <span className="text-[var(--color-text-muted)]">تاريخ الميلاد:</span>
+                                    <span className="font-medium">{formatDate(cv.birthDate)}</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-sm">
+                                    <Hash className="h-4 w-4 text-[var(--color-text-muted)] shrink-0" />
+                                    <span className="text-[var(--color-text-muted)]">الرقم القومي:</span>
+                                    <span className="font-medium tabular-nums">{cv.nationalId}</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-sm">
+                                    <Heart className="h-4 w-4 text-[var(--color-text-muted)] shrink-0" />
+                                    <span className="text-[var(--color-text-muted)]">الحالة الاجتماعية:</span>
+                                    <span className="font-medium">{cv.maritalStatus}</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-sm">
+                                    <Baby className="h-4 w-4 text-[var(--color-text-muted)] shrink-0" />
+                                    <span className="text-[var(--color-text-muted)]">عدد الأبناء:</span>
+                                    <span className="font-medium">{cv.childrenCount}</span>
+                                </div>
+                                {cv.militaryStatus !== "-" && (
+                                    <div className="flex items-center gap-2 text-sm">
+                                        <Shield className="h-4 w-4 text-[var(--color-text-muted)] shrink-0" />
+                                        <span className="text-[var(--color-text-muted)]">الموقف من التجنيد:</span>
+                                        <span className="font-medium">{cv.militaryStatus}</span>
+                                    </div>
+                                )}
+                                <div className="flex items-center gap-2 text-sm">
+                                    <Phone className="h-4 w-4 text-[var(--color-text-muted)] shrink-0" />
+                                    <span className="text-[var(--color-text-muted)]">الهاتف:</span>
+                                    <span className="font-medium tabular-nums" dir="ltr">{cv.phone}</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-sm">
+                                    <Mail className="h-4 w-4 text-[var(--color-text-muted)] shrink-0" />
+                                    <span className="text-[var(--color-text-muted)]">البريد:</span>
+                                    <span className="font-medium text-xs truncate" dir="ltr">{employee.email}</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-sm">
+                                    <MapPin className="h-4 w-4 text-[var(--color-text-muted)] shrink-0" />
+                                    <span className="text-[var(--color-text-muted)]">العنوان:</span>
+                                    <span className="font-medium">{cv.address}</span>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Education */}
+                    <Card className="mb-4">
+                        <CardHeader>
+                            <CardTitle className="text-base flex items-center gap-2">
+                                <GraduationCap className="h-4 w-4 text-[var(--color-primary)]" />
+                                التعليم
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="flex items-start gap-3">
+                                <div className="h-10 w-10 rounded-xl bg-[var(--color-primary)]/10 flex items-center justify-center shrink-0">
+                                    <GraduationCap className="h-5 w-5 text-[var(--color-primary)]" />
+                                </div>
+                                <div>
+                                    <p className="font-semibold text-[var(--color-text-dark)]">{cv.education}</p>
+                                    <p className="text-sm text-[var(--color-text-muted)]">{cv.university}</p>
+                                    <p className="text-xs text-[var(--color-text-muted)] mt-0.5">تخرج {cv.graduationYear}</p>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Skills */}
+                    {cv.skills.length > 0 && (
+                        <Card className="mb-4">
+                            <CardHeader>
+                                <CardTitle className="text-base flex items-center gap-2">
+                                    <Sparkles className="h-4 w-4 text-[var(--color-primary)]" />
+                                    المهارات
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="flex flex-wrap gap-2">
+                                    {cv.skills.map((skill, i) => (
+                                        <Badge key={i} variant="secondary" className="text-xs px-3 py-1">
+                                            {skill}
+                                        </Badge>
+                                    ))}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {/* Work Experience */}
+                    {cv.experiences.length > 0 && (
+                        <Card className="mb-4">
+                            <CardHeader>
+                                <CardTitle className="text-base flex items-center gap-2">
+                                    <Briefcase className="h-4 w-4 text-[var(--color-primary)]" />
+                                    الخبرات العملية
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="relative space-y-6">
+                                    {/* Timeline line */}
+                                    <div className="absolute top-2 right-[19px] bottom-2 w-px bg-[var(--color-border)]" />
+                                    {cv.experiences.map((exp, i) => (
+                                        <div key={i} className="flex gap-4 relative">
+                                            <div className="h-10 w-10 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center shrink-0 z-10">
+                                                <Briefcase className="h-4 w-4 text-[var(--color-text-muted)]" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center justify-between flex-wrap gap-1">
+                                                    <p className="font-semibold text-[var(--color-text-dark)]">{exp.role}</p>
+                                                    <span className="text-xs text-[var(--color-text-muted)] tabular-nums">
+                                                        {formatDate(exp.startDate)} — {exp.endDate ? formatDate(exp.endDate) : "حتى الآن"}
+                                                    </span>
+                                                </div>
+                                                <p className="text-sm text-[var(--color-primary)] font-medium">{exp.company}</p>
+                                                <p className="text-xs text-[var(--color-text-muted)] mt-1 leading-relaxed">{exp.description}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {/* Certifications */}
+                    {cv.certifications.length > 0 && (
+                        <Card className="mb-4">
+                            <CardHeader>
+                                <CardTitle className="text-base flex items-center gap-2">
+                                    <Award className="h-4 w-4 text-[var(--color-primary)]" />
+                                    الشهادات المهنية
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                    {cv.certifications.map((cert, i) => (
+                                        <div key={i} className="flex items-start gap-3 rounded-xl border border-[var(--color-border)] p-3 bg-[var(--color-surface)]/50">
+                                            <div className="h-9 w-9 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0">
+                                                <Award className="h-4 w-4 text-amber-500" />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="font-medium text-sm text-[var(--color-text-dark)] truncate">{cert.name}</p>
+                                                <p className="text-xs text-[var(--color-text-muted)]">{cert.issuer}</p>
+                                                <p className="text-xs text-[var(--color-text-muted)] mt-0.5">{formatDate(cert.date)}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {/* Courses */}
+                    {cv.courses.length > 0 && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-base flex items-center gap-2">
+                                    <BookOpen className="h-4 w-4 text-[var(--color-primary)]" />
+                                    الدورات التدريبية
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                    {cv.courses.map((course, i) => (
+                                        <div key={i} className="flex items-start gap-3 rounded-xl border border-[var(--color-border)] p-3 bg-[var(--color-surface)]/50">
+                                            <div className="h-9 w-9 rounded-lg bg-[var(--color-info)]/10 flex items-center justify-center shrink-0">
+                                                <BookOpen className="h-4 w-4 text-[var(--color-info)]" />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="font-medium text-sm text-[var(--color-text-dark)] truncate">{course.name}</p>
+                                                <p className="text-xs text-[var(--color-text-muted)]">{course.provider}</p>
+                                                <div className="flex items-center gap-2 mt-0.5">
+                                                    <span className="text-xs text-[var(--color-text-muted)]">{formatDate(course.date)}</span>
+                                                    <span className="text-xs text-[var(--color-text-muted)]">•</span>
+                                                    <span className="text-xs text-[var(--color-text-muted)]">{course.duration}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+                </div>
+            )}
+
         </div>
     );
 }

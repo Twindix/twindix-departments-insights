@@ -12,7 +12,7 @@ export function AuthLayout() {
                     {APP_NAME_AR} v{APP_VERSION}
                 </p>
                 <p className="mt-1">
-                    طُوّر بـ <span className="animate-heartbeat inline-block text-[var(--color-error)]">❤️</span> بواسطة <a href="https://hawary.dev" target="_blank" rel="noopener noreferrer" className="text-[var(--color-primary)] hover:underline">Mohamed Elhawary</a>
+                    طُوّر بواسطة <a href="https://twindix.com" target="_blank" rel="noopener noreferrer" className="text-[var(--color-primary)] hover:underline" dir="ltr">Twindix Global Inc.</a>
                 </p>
             </footer>
         </div>

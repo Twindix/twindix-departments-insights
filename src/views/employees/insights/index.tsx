@@ -1,30 +1,42 @@
-import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { ArrowRight, User, Target, Award, BarChart3, FileText, BookOpen, Star } from "lucide-react";
-import { Header, ScoreGauge, ProgressBar, MemberInsightsSkeleton } from "@/components/shared";
+import { useCallback } from "react";
+import { useParams, useNavigate, useLocation, useSearchParams } from "react-router-dom";
+import { ArrowLeft, User, Target, Award, BarChart3, FileText, BookOpen, Star } from "lucide-react";
+import { Header, ScoreGauge, ProgressBar, EmployeeInsightsSkeleton } from "@/components/shared";
 import { Button, Card, CardHeader, CardTitle, CardContent, Badge } from "@/atoms";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/ui";
-import { useDeferredLoad } from "@/hooks";
-import { getMemberProfilePath } from "@/data";
-import { seedMembers, seedMemberInsights, SHARED_CORE_COMPETENCIES } from "@/data/seed";
+import { useDeferredLoad, usePageTitle } from "@/hooks";
+import { getEmployeeProfilePath } from "@/data";
+import { seedEmployees, seedEmployeeInsights, SHARED_CORE_COMPETENCIES } from "@/data/seed";
+import { getTenureInfo } from "@/utils";
 
-export function MemberInsightsView() {
+export function EmployeeInsightsView() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const location = useLocation();
+    const [searchParams, setSearchParams] = useSearchParams();
     const isReady = useDeferredLoad(150);
+    usePageTitle("تحليلات الأداء");
 
-    // Check if we came from the member's profile page
+    const tab = searchParams.get("tab") || "intro";
+    const handleTabChange = useCallback(
+        (value: string) => {
+            setSearchParams((prev) => { prev.set("tab", value); return prev; }, { replace: true });
+        },
+        [setSearchParams]
+    );
+
+    // Check if we came from the employee's profile page
     const cameFromProfile = (location.state as { from?: string } | null)?.from === "profile";
 
-    if (!isReady) return <MemberInsightsSkeleton />;
+    if (!isReady) return <EmployeeInsightsSkeleton />;
 
-    const members = seedMembers;
-    const allInsights = seedMemberInsights;
+    const employees = seedEmployees;
+    const allInsights = seedEmployeeInsights;
 
-    const member = members.find((m) => m.id === id);
-    const rawInsights = allInsights.find((i) => i.memberId === id);
+    const employee = employees.find((m) => m.id === id);
+    const rawInsights = allInsights.find((i) => i.employeeId === id);
 
-    if (!member || !rawInsights) {
+    if (!employee || !rawInsights) {
         return (
             <div className="flex items-center justify-center py-20 text-[var(--color-text-muted)]">
                 لم يتم العثور على بيانات التحليلات
@@ -32,7 +44,7 @@ export function MemberInsightsView() {
         );
     }
 
-    // Merge shared descriptions into the member's competencies
+    // Merge shared descriptions into the employee's competencies
     const insights = {
         ...rawInsights,
         competencies: rawInsights.competencies.map((comp, i) => ({
@@ -48,17 +60,42 @@ export function MemberInsightsView() {
     };
 
     const { overallPerformance } = insights;
+    const tenure = getTenureInfo(employee.joiningDate);
 
     return (
         <div className="space-y-6 animate-fade-in">
             <Header
-                title={`تحليلات الأداء - ${member.name}`}
-                description={`${member.role} | ${member.subDepartmentName} | ${insights.evaluationPeriod}`}
+                title={
+                    <span className="flex items-center gap-2 flex-wrap">
+                        {`تحليلات الأداء - ${employee.name}`}
+                        {tenure.isNewJoiner && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-400 animate-pulse">
+                                موظف جديد
+                            </span>
+                        )}
+                        {tenure.isSenior && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/15 text-amber-400 badge-shimmer">
+                                موظف قديم
+                            </span>
+                        )}
+                        {overallPerformance.totalPercentage >= 90 && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-yellow-500/15 text-yellow-400 badge-star">
+                                موظف متفوق
+                            </span>
+                        )}
+                        {overallPerformance.totalPercentage < 50 && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-red-500/15 text-red-400 badge-low">
+                                أداء منخفض
+                            </span>
+                        )}
+                    </span>
+                }
+                description={`${employee.role} | ${employee.subDepartmentName} | ${insights.evaluationPeriod}`}
                 actions={
                     <div className="flex items-center gap-2">
                         {!cameFromProfile && id && (
                             <Button
-                                onClick={() => navigate(getMemberProfilePath(id))}
+                                onClick={() => navigate(getEmployeeProfilePath(id))}
                                 className="gap-2"
                             >
                                 <User className="h-4 w-4" />
@@ -70,14 +107,14 @@ export function MemberInsightsView() {
                             onClick={() => navigate(-1)}
                             className="gap-2"
                         >
-                            <ArrowRight className="h-4 w-4" />
+                            <ArrowLeft className="h-4 w-4" />
                             العودة
                         </Button>
                     </div>
                 }
             />
 
-            <Tabs defaultValue="intro" dir="rtl">
+            <Tabs value={tab} onValueChange={handleTabChange} dir="rtl">
                 <TabsList>
                     <TabsTrigger value="intro" className="gap-1">
                         <BookOpen className="h-3.5 w-3.5" />

@@ -72,6 +72,9 @@ export function DatePicker({ value, onChange, min, max, disabled, label }: DateP
                         selected={selectedDate}
                         onSelect={handleSelect}
                         defaultMonth={selectedDate}
+                        captionLayout="dropdown"
+                        startMonth={minDate || new Date(new Date().getFullYear() - 10, 0)}
+                        endMonth={maxDate || new Date()}
                         disabled={[
                             ...(minDate ? [{ before: minDate }] : []),
                             ...(maxDate ? [{ after: maxDate }] : []),
@@ -79,15 +82,17 @@ export function DatePicker({ value, onChange, min, max, disabled, label }: DateP
                         components={{
                             Chevron: ({ orientation }) =>
                                 orientation === "left"
-                                    ? <ChevronLeft className="h-4 w-4" />
-                                    : <ChevronRight className="h-4 w-4" />,
+                                    ? <ChevronRight className="h-4 w-4" />
+                                    : <ChevronLeft className="h-4 w-4" />,
                         }}
                         classNames={{
-                            root: "p-3",
+                            root: "p-3 rdp-custom",
                             months: "flex flex-col",
                             month: "space-y-3",
-                            month_caption: "flex items-center justify-center",
-                            caption_label: "text-sm font-semibold text-[var(--color-text-dark)]",
+                            month_caption: "flex items-center justify-between mb-2",
+                            caption_label: "hidden",
+                            dropdowns: "flex items-center gap-2 flex-1 justify-center",
+                            dropdown: "appearance-none bg-[var(--color-surface)] text-[var(--color-text-primary)] text-sm font-semibold rounded-lg px-3 py-1.5 border border-[var(--color-border)] cursor-pointer focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]",
                             nav: "flex items-center gap-1",
                             button_previous: "h-7 w-7 flex items-center justify-center rounded-lg hover:bg-[var(--color-surface-hover)] text-[var(--color-text-muted)] cursor-pointer transition-colors",
                             button_next: "h-7 w-7 flex items-center justify-center rounded-lg hover:bg-[var(--color-surface-hover)] text-[var(--color-text-muted)] cursor-pointer transition-colors",

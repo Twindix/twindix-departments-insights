@@ -4,11 +4,12 @@ import { toast } from "sonner";
 import { Header, ProfileSkeleton } from "@/components/shared";
 import { Card, CardHeader, CardTitle, CardContent, Button, Input, Label } from "@/atoms";
 import { Avatar, AvatarFallback } from "@/ui";
-import { useAuth, useDeferredLoad } from "@/hooks";
+import { useAuth, useDeferredLoad, usePageTitle } from "@/hooks";
 
 export function ProfileView() {
     const { user, onUpdateUser } = useAuth();
     const isReady = useDeferredLoad(100);
+    usePageTitle("الملف الشخصي");
     const [name, setName] = useState(user?.name ?? "");
     const [isSaving, setIsSaving] = useState(false);
 

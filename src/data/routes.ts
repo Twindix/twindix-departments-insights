@@ -2,16 +2,19 @@ export const routesData = {
     login: "/login",
     dashboard: "/",
     departmentHr: "/departments/hr",
-    memberProfile: "/members/:id/profile",
-    memberInsights: "/members/:id/insights",
+    departmentHrPerformance: "/departments/hr/sections/performance-management",
+    departmentProjects: "/departments/projects",
+    departmentFinance: "/departments/finance",
+    employeeProfile: "/employees/:id/profile",
+    employeeInsights: "/employees/:id/insights",
     settings: "/settings",
     profile: "/profile",
 } as const;
 
-export function getMemberProfilePath(id: string): string {
-    return `/members/${id}/profile`;
+export function getEmployeeProfilePath(id: string): string {
+    return `/employees/${id}/profile`;
 }
 
-export function getMemberInsightsPath(id: string): string {
-    return `/members/${id}/insights`;
+export function getEmployeeInsightsPath(id: string): string {
+    return `/employees/${id}/insights`;
 }

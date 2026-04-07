@@ -15,7 +15,7 @@ const DropdownMenuContent = forwardRef<
             ref={ref}
             sideOffset={sideOffset}
             className={cn(
-                "z-50 min-w-[8rem] overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-1 shadow-lg",
+                "z-50 min-w-[8rem] overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-1 shadow-lg text-right [direction:rtl]",
                 className
             )}
             {...props}
@@ -31,7 +31,7 @@ const DropdownMenuItem = forwardRef<
     <DropdownMenuPrimitive.Item
         ref={ref}
         className={cn(
-            "relative flex cursor-pointer select-none items-center gap-2 rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] outline-none transition-colors hover:bg-[var(--color-surface-hover)] focus:bg-[var(--color-surface-hover)] data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+            "relative flex cursor-pointer select-none items-center gap-2 rounded-lg px-3 py-2 text-sm text-right text-[var(--color-text-primary)] outline-none transition-colors hover:bg-[var(--color-surface-hover)] focus:bg-[var(--color-surface-hover)] data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
             className
         )}
         {...props}
@@ -58,7 +58,7 @@ const DropdownMenuLabel = forwardRef<
     <DropdownMenuPrimitive.Label
         ref={ref}
         className={cn(
-            "px-3 py-1.5 text-sm font-semibold text-[var(--color-text-dark)]",
+            "px-3 py-1.5 text-sm font-semibold text-right text-[var(--color-text-dark)]",
             className
         )}
         {...props}

@@ -6,4 +6,5 @@ export {
     useOnlineStatus,
     useSettings,
     useDeferredLoad,
+    usePageTitle,
 } from "./shared";

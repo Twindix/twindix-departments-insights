@@ -62,7 +62,7 @@ export function LoginView() {
                                 type="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                placeholder="hr.admin@twindix.com"
+                                placeholder="hr.performance.admin@twindix.com"
                                 required
                                 autoFocus
                                 dir="rtl"

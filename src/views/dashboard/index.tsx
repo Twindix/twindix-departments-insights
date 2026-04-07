@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { Users, TrendingUp, Building2, Award, Lock, LockOpen } from "lucide-react";
 import { toast } from "sonner";
 import { Header, DepartmentCircle, StatCard, DashboardSkeleton } from "@/components/shared";
-import { useDeferredLoad } from "@/hooks";
+import { useDeferredLoad, usePageTitle } from "@/hooks";
 import { routesData } from "@/data";
 import { seedDepartments } from "@/data/seed";
 import type { DepartmentInterface } from "@/interfaces";
@@ -10,12 +10,13 @@ import type { DepartmentInterface } from "@/interfaces";
 export function DashboardView() {
     const navigate = useNavigate();
     const isReady = useDeferredLoad(200);
+    usePageTitle();
     const departments = seedDepartments;
 
     if (!isReady) return <DashboardSkeleton />;
 
-    const totalMembers = departments.reduce(
-        (sum, d) => sum + d.memberCount,
+    const totalEmployees = departments.reduce(
+        (sum, d) => sum + d.employeeCount,
         0
     );
     const avgPerformance =
@@ -28,9 +29,15 @@ export function DashboardView() {
               )
             : 0;
 
+    const departmentRoutes: Record<string, string> = {
+        "dept-hr": routesData.departmentHr,
+        "dept-projects": routesData.departmentProjects,
+        "dept-finance": routesData.departmentFinance,
+    };
+
     const handleDepartmentClick = (dept: DepartmentInterface) => {
-        if (dept.isAccessible) {
-            navigate(routesData.departmentHr);
+        if (dept.isAccessible && departmentRoutes[dept.id]) {
+            navigate(departmentRoutes[dept.id]);
         } else {
             toast.error("ليس لديك تصريح للاطلاع على هذه المعلومات", {
                 description: `الوصول إلى ${dept.name} مقيّد. تواصل مع المسؤول للحصول على صلاحية.`,
@@ -56,7 +63,7 @@ export function DashboardView() {
                 />
                 <StatCard
                     label="إجمالي الموظفين"
-                    value={totalMembers}
+                    value={totalEmployees}
                     icon={Users}
                     color="#10B981"
                 />
@@ -82,16 +89,14 @@ export function DashboardView() {
                     أقسام الشركة
                 </h2>
                 <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 stagger-children">
-                    {[...departments]
-                        .sort((a, b) => (a.isAccessible === b.isAccessible ? 0 : a.isAccessible ? -1 : 1))
-                        .map((dept) => (
+                    {departments.map((dept) => (
                         <DepartmentCircle
                             key={dept.id}
                             name={dept.name}
                             performance={dept.overallPerformance}
                             color={dept.color}
                             isAccessible={dept.isAccessible}
-                            memberCount={dept.memberCount}
+                            employeeCount={dept.employeeCount}
                             onClick={() => handleDepartmentClick(dept)}
                         />
                     ))}

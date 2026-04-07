@@ -1,4 +1,4 @@
-import type { MemberInterface } from "@/interfaces";
+import type { EmployeeInterface } from "@/interfaces";
 
 // Deterministic pseudo-random number generator (mulberry32)
 function seededRandom(seed: number): () => number {
@@ -35,6 +35,42 @@ const LAST_NAMES = [
     "شريف", "عبد الحميد", "حسام", "جمال", "فؤاد", "شوقي", "نور", "حلمي", "الدين", "محمود",
     "منصور", "عمار", "توفيق", "رشدي", "كمال", "غنيم", "مرسي", "شاهين", "عوض", "حبيب",
 ];
+
+// ── Exported female name set (used by CV seed for gender detection) ─────────
+export const FEMALE_NAME_SET = new Set(FEMALE_FIRST_NAMES);
+
+// ── Arabic to Latin transliteration for emails ─────────────────────────────
+
+const AR_TO_EN: Record<string, string> = {
+    "محمد": "mohammed", "أحمد": "ahmed", "علي": "ali", "عمر": "omar", "خالد": "khaled",
+    "حسن": "hassan", "إبراهيم": "ibrahim", "يوسف": "youssef", "مصطفى": "mustafa", "طارق": "tarek",
+    "سامي": "sami", "هشام": "hesham", "عبد الله": "abdullah", "كريم": "karim", "رامي": "rami",
+    "أسامة": "osama", "مروان": "marwan", "إسلام": "islam", "حازم": "hazem", "تامر": "tamer",
+    "وائل": "wael", "عصام": "essam", "ياسر": "yasser", "فؤاد": "fouad", "نبيل": "nabil",
+    "شريف": "sherif", "جمال": "gamal", "عادل": "adel", "سعيد": "saeed", "فيصل": "faisal",
+    "بلال": "bilal", "زياد": "ziad", "أنس": "anas", "باسم": "basem", "حسام": "hossam",
+    "رضا": "reda", "ماجد": "maged", "سامح": "sameh", "منصور": "mansour", "عماد": "emad",
+    "سارة": "sara", "نورهان": "nourhan", "هاجر": "hagar", "ياسمين": "yasmin", "دينا": "dina",
+    "منى": "mona", "فاطمة": "fatma", "ريهام": "reham", "هند": "hend", "هديل": "hadeel",
+    "أميرة": "amira", "رنا": "rana", "إيمان": "iman", "نهى": "noha", "عبير": "abeer",
+    "بسمة": "basma", "أفنان": "afnan", "سمية": "somaya", "مريم": "mariam", "لمياء": "lamiaa",
+    "داليا": "dalia", "نادية": "nadia", "هبة": "heba", "شيماء": "shimaa", "آية": "aya",
+    "ندى": "nada", "رغدة": "raghda", "جهاد": "gehad", "لينا": "lina", "نورا": "noura",
+    "سمير": "samir", "جمعة": "gomaa", "فهمي": "fahmy", "سعد": "saad", "محمود": "mahmoud",
+    "بهاء": "bahaa", "يحيى": "yahia", "خليفة": "khalifa", "صلاح": "salah", "عفيفي": "afifi",
+    "فرحات": "farhat", "حسني": "hosny", "شعبان": "shaaban", "عبد القادر": "abdelkader",
+    "محسن": "mohsen", "رفعت": "refaat", "حسين": "hussein", "عبد الفتاح": "abdelfattah",
+    "بيومي": "bayoumy", "النجار": "elnaggar", "الشريف": "elsherif", "فتحي": "fathy",
+    "بكر": "bakr", "السيد": "elsayed", "ناصر": "nasser", "حمدي": "hamdy", "الزهراء": "elzahraa",
+    "سالم": "salem", "عبد الحميد": "abdelhamid", "شوقي": "shawky", "نور": "nour",
+    "حلمي": "helmy", "الدين": "eldin", "عمار": "ammar", "توفيق": "tawfik",
+    "رشدي": "roshdy", "كمال": "kamal", "غنيم": "ghonaim", "مرسي": "morsy",
+    "شاهين": "shaheen", "عوض": "awad", "حبيب": "habib", "عزت": "ezzat",
+};
+
+function transliterate(name: string): string {
+    return AR_TO_EN[name] || name.replace(/ /g, "").toLowerCase();
+}
 
 // ── Department configs ──────────────────────────────────────────────────────
 
@@ -104,15 +140,48 @@ const DEPT_CONFIGS: DeptConfig[] = [
 
 // ── Exported counts map (used by departments.ts) ────────────────────────────
 
-export const DEPARTMENT_MEMBER_COUNTS: Record<string, number> = {};
+export const DEPARTMENT_EMPLOYEE_COUNTS: Record<string, number> = {};
 for (const cfg of DEPT_CONFIGS) {
-    DEPARTMENT_MEMBER_COUNTS[cfg.subDeptId] = cfg.count;
+    DEPARTMENT_EMPLOYEE_COUNTS[cfg.subDeptId] = cfg.count;
 }
 
-// ── Generate members ────────────────────────────────────────────────────────
+// ── Gender-accurate role transformation ─────────────────────────────────────
 
-function generateMembers(): MemberInterface[] {
-    const members: MemberInterface[] = [];
+const MALE_TO_FEMALE_ROLE: [RegExp, string][] = [
+    [/\bمدير\b/, "مديرة"],
+    [/\bأخصائي\b/, "أخصائية"],
+    [/\bمهندس\b/, "مهندسة"],
+    [/\bمحلل\b/, "محللة"],
+    [/\bمشرف\b/, "مشرفة"],
+    [/\bمنسق\b/, "منسقة"],
+    [/\bفني\b/, "فنية"],
+    [/\bمسؤول\b/, "مسؤولة"],
+    [/\bمخطط\b/, "مخططة"],
+    [/\bمراجع\b/, "مراجعة"],
+    [/\bمحاسب\b/, "محاسبة"],
+    [/\bمندوب\b/, "مندوبة"],
+    [/\bموظف\b/, "موظفة"],
+    [/\bمصمم\b/, "مصممة"],
+    [/\bمطور\b/, "مطورة"],
+    [/\bأمين\b/, "أمينة"],
+    [/\bسكرتير\b/, "سكرتيرة"],
+    [/\bتنفيذي\b/, "تنفيذية"],
+];
+
+function feminizeRole(role: string): string {
+    // Skip if already feminine (contains ة in key positions)
+    if (/موظفة|مندوبة|أخصائية|مهندسة|مديرة|منسقة|مسؤولة/.test(role)) return role;
+    let result = role;
+    for (const [pattern, replacement] of MALE_TO_FEMALE_ROLE) {
+        result = result.replace(pattern, replacement);
+    }
+    return result;
+}
+
+// ── Generate employees ────────────────────────────────────────────────────────
+
+function generateEmployees(): EmployeeInterface[] {
+    const employees: EmployeeInterface[] = [];
     let globalIndex = 0;
 
     for (const dept of DEPT_CONFIGS) {
@@ -124,18 +193,25 @@ function generateMembers(): MemberInterface[] {
             const firstNames = isMale ? MALE_FIRST_NAMES : FEMALE_FIRST_NAMES;
             const firstName = firstNames[Math.floor(rand() * firstNames.length)];
             const lastName = LAST_NAMES[Math.floor(rand() * LAST_NAMES.length)];
-            const role = dept.roles[Math.floor(rand() * dept.roles.length)];
+            const rawRole = dept.roles[Math.floor(rand() * dept.roles.length)];
+            const role = isMale ? rawRole : feminizeRole(rawRole);
 
-            const id = `mem-${String(globalIndex + 1).padStart(4, "0")}`;
+            const id = `${globalIndex + 1}`;
             const name = `${firstName} ${lastName}`;
 
-            // Transliterate first characters for email (simplified)
-            const email = `${firstName.replace(/ /g, "")}.${lastName.replace(/ /g, "")}${globalIndex + 1}@twindix.com`;
+            // Transliterate Arabic names to English for email
+            const email = `${transliterate(firstName)}.${transliterate(lastName)}${globalIndex + 1}@twindix.com`;
 
             // Avatar: first letter of first name + first letter of last name
             const avatar = `${firstName.charAt(0)}${lastName.charAt(0)}`;
 
-            members.push({
+            // Generate joining date: range from 15 years ago to present
+            const yearsAgo = rand() * 15;
+            const joiningMs = Date.now() - yearsAgo * 365.25 * 24 * 60 * 60 * 1000;
+            const joiningD = new Date(joiningMs);
+            const joiningDate = `${joiningD.getFullYear()}-${String(joiningD.getMonth() + 1).padStart(2, "0")}-${String(joiningD.getDate()).padStart(2, "0")}`;
+
+            employees.push({
                 id,
                 name,
                 email,
@@ -143,13 +219,14 @@ function generateMembers(): MemberInterface[] {
                 avatar,
                 subDepartmentId: dept.subDeptId,
                 subDepartmentName: dept.subDeptName,
+                joiningDate,
             });
 
             globalIndex++;
         }
     }
 
-    return members;
+    return employees;
 }
 
-export const seedMembers: MemberInterface[] = generateMembers();
+export const seedEmployees: EmployeeInterface[] = generateEmployees();

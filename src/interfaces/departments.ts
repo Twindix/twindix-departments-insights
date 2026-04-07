@@ -5,7 +5,7 @@ export interface DepartmentInterface {
     color: string;
     isAccessible: boolean;
     overallPerformance: number;
-    memberCount: number;
+    employeeCount: number;
     subDepartments?: SubDepartmentInterface[];
 }
 
@@ -18,8 +18,8 @@ export interface SubDepartmentInterface {
 
 export interface DepartmentDailyRecordInterface {
     id: string;
-    memberId: string;
-    memberName: string;
+    employeeId: string;
+    employeeName: string;
     departmentName: string;
     subDepartmentId: string;
     date: string;

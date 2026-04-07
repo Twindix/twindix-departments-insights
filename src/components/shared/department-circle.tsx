@@ -7,7 +7,7 @@ interface DepartmentCircleProps {
     performance: number;
     color: string;
     isAccessible: boolean;
-    memberCount: number;
+    employeeCount: number;
     onClick: () => void;
     className?: string;
 }
@@ -15,9 +15,9 @@ interface DepartmentCircleProps {
 export function DepartmentCircle({
     name,
     performance,
-    color,
+    color: _color,
     isAccessible,
-    memberCount,
+    employeeCount,
     onClick,
     className,
 }: DepartmentCircleProps) {
@@ -25,8 +25,9 @@ export function DepartmentCircle({
         <button
             onClick={onClick}
             className={cn(
-                "dept-circle group relative flex flex-col items-center gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] p-6 hover-lift cursor-pointer",
-                isAccessible && "ring-2 ring-[var(--color-success)]/30",
+                "dept-circle group relative flex flex-col items-center gap-3 rounded-2xl border bg-[var(--color-bg)] p-6 cursor-pointer transition-all duration-200",
+                isAccessible && "border-[var(--color-success)] ring-2 ring-[var(--color-success)]/30 hover:ring-[var(--color-success)]/50 hover:scale-[1.03]",
+                !isAccessible && "border-[var(--color-border)]",
                 !isAccessible && "opacity-85",
                 className
             )}
@@ -45,14 +46,14 @@ export function DepartmentCircle({
                     {name}
                 </p>
                 <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-                    {memberCount} موظف
+                    {employeeCount} موظف
                 </p>
             </div>
 
             {/* Hover indicator */}
             <div
                 className="h-1 w-12 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                style={{ backgroundColor: isAccessible ? color : "var(--color-text-muted)" }}
+                style={{ backgroundColor: isAccessible ? "var(--color-success)" : "var(--color-text-muted)" }}
             />
 
             {/* Grey lock circle for inaccessible departments */}

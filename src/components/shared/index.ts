@@ -11,12 +11,13 @@ export { MobileNav } from "./mobile-nav";
 export { Topbar } from "./topbar";
 export { DepartmentCircle } from "./department-circle";
 export { DataTable } from "./data-table";
+export type { SortDirection, SortState } from "./data-table";
 export { StatusBadge } from "./status-badge";
 export { DatePicker } from "./date-picker";
 export {
     DashboardSkeleton,
     ProfileSkeleton,
-    MemberProfileSkeleton,
-    MemberInsightsSkeleton,
+    EmployeeProfileSkeleton,
+    EmployeeInsightsSkeleton,
     SettingsSkeleton,
 } from "./page-loader";

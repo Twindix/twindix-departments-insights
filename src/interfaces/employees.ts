@@ -1,4 +1,4 @@
-export interface MemberInterface {
+export interface EmployeeInterface {
     id: string;
     name: string;
     email: string;
@@ -6,6 +6,7 @@ export interface MemberInterface {
     avatar: string;
     subDepartmentId: string;
     subDepartmentName: string;
+    joiningDate: string;
 }
 
 export interface ObjectiveInterface {
@@ -60,8 +61,8 @@ export interface CoreCompetencyInterface {
     levels: { level: number; description: string }[];
 }
 
-export interface MemberInsightsInterface {
-    memberId: string;
+export interface EmployeeInsightsInterface {
+    employeeId: string;
     introduction: string;
     evaluationPeriod: string;
     department: string;

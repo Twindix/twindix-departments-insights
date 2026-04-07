@@ -13,8 +13,9 @@ const SelectTrigger = forwardRef<
 >(({ className, children, ...props }, ref) => (
     <SelectPrimitive.Trigger
         ref={ref}
+        dir="rtl"
         className={cn(
-            "flex h-10 w-full items-center justify-between rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 text-sm placeholder:text-[var(--color-text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+            "flex h-10 w-full items-center justify-between rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 text-sm text-right placeholder:text-[var(--color-text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
             className
         )}
         {...props}
@@ -34,6 +35,7 @@ const SelectContent = forwardRef<
     <SelectPrimitive.Portal>
         <SelectPrimitive.Content
             ref={ref}
+            dir="rtl"
             className={cn(
                 "relative z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] shadow-lg",
                 position === "popper" && "translate-y-1",
@@ -63,12 +65,12 @@ const SelectItem = forwardRef<
     <SelectPrimitive.Item
         ref={ref}
         className={cn(
-            "relative flex w-full cursor-pointer select-none items-center rounded-lg py-1.5 pr-8 pl-2 text-sm outline-none hover:bg-[var(--color-surface-hover)] focus:bg-[var(--color-surface-hover)] data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+            "relative flex w-full cursor-pointer select-none items-center rounded-lg py-1.5 pe-8 ps-2 text-sm text-right outline-none hover:bg-[var(--color-surface-hover)] focus:bg-[var(--color-surface-hover)] data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
             className
         )}
         {...props}
     >
-        <span className="absolute right-2 flex h-3.5 w-3.5 items-center justify-center">
+        <span className="absolute end-2 flex h-3.5 w-3.5 items-center justify-center">
             <SelectPrimitive.ItemIndicator>
                 <Check className="h-4 w-4" />
             </SelectPrimitive.ItemIndicator>

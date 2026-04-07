@@ -1,5 +1,5 @@
 import type { DepartmentDailyRecordInterface } from "@/interfaces";
-import { seedMembers } from "./members";
+import { seedEmployees } from "./employees";
 
 // Deterministic pseudo-random number generator (mulberry32)
 function seededRandom(seed: number): () => number {
@@ -18,7 +18,7 @@ function seededRandom(seed: number): () => number {
 // - Weekly for last 3 months
 // - Bi-weekly for 3 months to 1 year
 // - Monthly for 1 year to 3 years
-// Total ~100 dates per member — manageable bundle size
+// Total ~100 dates per employee — manageable bundle size
 function generateDates(): string[] {
     const added = new Set<string>();
     const today = new Date();
@@ -85,11 +85,11 @@ const DEPT_PERFORMANCE_BIAS: Record<string, number> = {
     "dept-sales": 1,    // ~52% — lowest
 };
 
-function getMemberTier(memberIndex: number, deptId: string): { minExec: number; maxExec: number; minHours: number; maxHours: number; absentRate: number } {
+function getEmployeeTier(employeeIndex: number, deptId: string): { minExec: number; maxExec: number; minHours: number; maxHours: number; absentRate: number } {
     const deptBias = DEPT_PERFORMANCE_BIAS[deptId] ?? 5;
-    // Combine member index variation with department bias
-    const tierRoll = ((memberIndex * 7 + 3) % 10);
-    // Shift the roll by dept bias: high-bias depts have more excellent/good members
+    // Combine employee index variation with department bias
+    const tierRoll = ((employeeIndex * 7 + 3) % 10);
+    // Shift the roll by dept bias: high-bias depts have more excellent/good employees
     const adjusted = Math.min(9, Math.max(0, tierRoll + deptBias - 5));
 
     if (adjusted >= 8) {
@@ -111,9 +111,9 @@ function generateRecords(): DepartmentDailyRecordInterface[] {
     const records: DepartmentDailyRecordInterface[] = [];
     let recordId = 1;
 
-    for (let mi = 0; mi < seedMembers.length; mi++) {
-        const member = seedMembers[mi];
-        const tier = getMemberTier(mi, member.subDepartmentId);
+    for (let mi = 0; mi < seedEmployees.length; mi++) {
+        const employee = seedEmployees[mi];
+        const tier = getEmployeeTier(mi, employee.subDepartmentId);
 
         for (let di = 0; di < DATES.length; di++) {
             const date = DATES[di];
@@ -158,10 +158,10 @@ function generateRecords(): DepartmentDailyRecordInterface[] {
 
             records.push({
                 id: `rec-${String(recordId).padStart(4, "0")}`,
-                memberId: member.id,
-                memberName: member.name,
-                departmentName: member.subDepartmentName,
-                subDepartmentId: member.subDepartmentId,
+                employeeId: employee.id,
+                employeeName: employee.name,
+                departmentName: employee.subDepartmentName,
+                subDepartmentId: employee.subDepartmentId,
                 date,
                 registrationStatus,
                 attendanceDays: isActive ? 1 : 0,

@@ -14,15 +14,15 @@
 ║                                                                  ║
 ║          D E P A R T M E N T S   I N S I G H T S               ║
 ║                                                                  ║
-║   Department Performance  •  Employee KPIs  •  HR Analytics     ║
+║   Department Performance  •  Employee KPIs  •  Analytics        ║
 ║   Competency Assessment  •  9 Departments  •  700+ Employees    ║
 ║                                                                  ║
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
-**Departments Performance and Employee Insights Platform**
+**Interactive Dashboard for Tracking All Company Department Performance, Employee KPIs, and Organizational Analytics**
 
-*A platform that consolidates employee performance data into an interactive dashboard — so HR managers can monitor departments, track KPIs, and assess competencies instead of digging through Excel sheets.*
+*A comprehensive platform that consolidates department performance data and employee insights into an interactive dashboard — enabling managers across all departments to monitor performance, track KPIs, and assess competencies instead of digging through Excel sheets.*
 
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](https://react.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?logo=typescript&logoColor=white)](https://typescriptlang.org)
@@ -40,15 +40,15 @@
 
 ## About the Project
 
-Twindix Departments Insights is a departments performance and employee insights platform designed to solve the most common challenges HR managers face when tracking employee performance across multiple departments.
+Twindix Departments Insights is an interactive dashboard for tracking all company department performance, employee KPIs, and organizational analytics. It is designed to solve the most common challenges managers face when monitoring performance across multiple departments.
 
-The platform was born from real pain points: employee performance data scattered across Excel sheets, manual evaluation processes that take weeks, no real-time visibility into departmental analytics, and the lack of a unified view for competency assessments and KPI tracking across the entire organization.
+The platform was born from real pain points: department performance data scattered across Excel sheets, manual evaluation processes that take weeks, no real-time visibility into departmental analytics, and the lack of a unified view for competency assessments and KPI tracking across the entire organization.
 
 **This is not about surveillance.** It is about giving HR managers the tools to understand departmental performance patterns, identify training needs, recognize high performers, and make data-driven decisions — replacing fragmented Excel workflows with a modern, interactive dashboard.
 
 ### What Problems Does This Platform Solve?
 
-Based on the original data sources — **Departments Insights.xlsx** (daily task tracking across 9 departments) and **Member Insights.xlsx** (individual performance evaluation templates) — the platform addresses **5 core HR analytics challenges**:
+Based on the original data sources — **Departments Insights.xlsx** (daily task tracking across 9 departments) and **Employee Insights.xlsx** (individual performance evaluation templates) — the platform addresses **5 core HR analytics challenges**:
 
 | # | Problem Area | What Happens | Platform Solution |
 |---|-------------|-------------|-------------------|
@@ -67,7 +67,7 @@ The platform's data originates from two Excel files (originally exported from Ap
 - **9 Department sheets** (المالية, الإدارة العليا, مبيعات الشركات, مبيعات داخلية, خدمة العملاء, التسويق, الشؤون الإدارية, المشروعات, مبيعات بروكر) — Per-employee daily records with 18 columns: registration status, attendance, task counts, execution rates, planned/unplanned split, work hours, actual hours, lost hours, and work percentages
 - Each department sheet contains repeated date blocks with employee rows + totals per date
 
-**Member Insights.xlsx** — 8 sheets forming a complete performance evaluation template:
+**Employee Insights.xlsx** — 8 sheets forming a complete performance evaluation template:
 - **Cover** — Department name, evaluation period (الفترة الاولى من 1-1-2019 وحتى 28-2-2019)
 - **Introduction** — Performance evaluation system description and objectives
 - **Objectives** — Technical performance KPIs (70% weight) with 8 metrics: follow-up rates, activity execution, visit rates, contract rates, revenue targets, report compliance, financial policy adherence
@@ -81,9 +81,9 @@ The platform's data originates from two Excel files (originally exported from Ap
 The app structure follows a **Wireframe.pdf** that defines:
 - Dashboard with 8 department circles (إدارة المشروعات, إدارة المالية, إدارة خدمة العملاء, إدارة IT, إدارة الموارد البشرية, إدارة التخطيط الاستراتيجي, إدارة المراجعة, إدارة القطاع التجاري)
 - Permission-gated access ("ليس لديك تصريح للاطلاع على هذه المعلومات")
-- HR department deep-dive with member tables
-- Individual member profile with all Excel data rendered in modern UI
-- Member insights page showing the full evaluation template content
+- HR department deep-dive with employee tables
+- Individual employee profile with all Excel data rendered in modern UI
+- Employee insights page showing the full evaluation template content
 
 ---
 
@@ -91,6 +91,9 @@ The app structure follows a **Wireframe.pdf** that defines:
 
 ### Department Dashboard
 The central view showing 9 company departments as interactive cards with animated conic-gradient performance gauges. Each card displays the department name, employee count, and overall performance percentage. The HR department card has a green access indicator — clicking it navigates to the detailed HR view. Other departments show a lock icon and display an access restriction toast notification. Summary statistics above show total departments, total employees, average performance, and top-performing department.
+
+### HR Department — Sections Overview
+A radial layout showing 10 HR management sections (المراجعة, الهيكل والتوظيف, التدريب والتطوير, السياسات والإجراءات, تقييم وإدارة الأداء, التحفيز والمزايا, الرواتب والأجور, الشئون الإدارية, خطة التعاقب, الولاء المؤسسي). Each section shows a performance percentage indicator and access status (locked/unlocked). Currently only "تقييم وإدارة الأداء" (Performance Management) is accessible, leading to the employee tables view.
 
 ### HR Department — Employee Tables
 A tabbed interface with horizontal scrolling showing all 9 departments plus an "All" tab (700 employees). Each tab features:
@@ -100,7 +103,7 @@ A tabbed interface with horizontal scrolling showing all 9 departments plus an "
 - **Paginated table** — Configurable page sizes (5/10/20/50), first/prev/next/last navigation, row count display
 - **Table columns** — Employee name (clickable → profile), role, department, performance progress bar, insights button
 
-### Member Profile
+### Employee Profile
 Individual employee performance history page with:
 - **Summary stat cards** — Animated count-up numbers for total tasks, executed tasks, unexecuted tasks, lost hours, average performance
 - **SVG trend chart** — Interactive performance trend line with HTML axis labels, hover tooltips showing date and percentage, vertical guide lines, animated line drawing, and area fill
@@ -108,8 +111,8 @@ Individual employee performance history page with:
 - **Hours comparison** — Actual vs daily work hours bars per date
 - **Detailed daily cards** — Grid of cards per date showing all 18 tracked fields with status badges and mini progress bars
 
-### Member Performance Insights
-Six-tab evaluation view presenting the full Member Insights Excel data:
+### Employee Performance Insights
+Six-tab evaluation view presenting the full Employee Insights Excel data:
 - **مقدمة (Introduction)** — Performance evaluation system description + large overall score gauge + rating badge
 - **الأهداف (Objectives)** — KPI table with 8 metrics showing target vs actual with color coding, relative weights, notes, and mini comparison bars
 - **الجدارات (Competencies)** — 3 competency cards (Communication & Collaboration, Perseverance & Achievement, Customer Focus) each with 5-level visual scale, selected level highlight, score percentage, and behavioral description
@@ -121,6 +124,12 @@ Six-tab evaluation view presenting the full Member Insights Excel data:
 - **Dark / Light Mode** — System preference detection with manual toggle
 - **Compact View** — Toggleable mode that reduces padding and spacing across the entire interface
 - **Date Format** — Configurable display (short Arabic, full Arabic with weekday, ISO format)
+
+### URL State Persistence
+All filters, tabs, pagination (page number and limit), sort options, and view modes are persisted in URL query parameters. This means:
+- Refreshing the page restores the exact same view
+- URLs are shareable with the exact filter/sort/page state
+- Browser back/forward navigation preserves state
 
 ### Error Handling & Offline Support
 - **Error Boundary** — Catches rendering errors with Arabic error messages, copy-to-clipboard stack traces, and retry/home buttons
@@ -154,7 +163,7 @@ Six-tab evaluation view presenting the full Member Insights Excel data:
 
 ### Prerequisites
 - Node.js 20+
-- npm
+- pnpm
 
 ### Installation
 
@@ -163,20 +172,20 @@ Six-tab evaluation view presenting the full Member Insights Excel data:
 cd "Departments Insights"
 
 # Install dependencies
-npm install
+pnpm install
 
 # Start development server
-npm run dev
+pnpm dev
 
 # Build for production
-npm run build
+pnpm build
 
 # Preview production build
-npm run preview
+pnpm preview
 ```
 
 ### Demo Login
-- **Email:** hr.admin@twindix.com
+- **Email:** hr.performance.admin@twindix.com
 - **Password:** demo
 
 **[Live Demo →](https://twindix-departments-insights.netlify.app)**
@@ -194,10 +203,10 @@ The app includes 700 employees across 9 departments with realistic performance d
 | Concern | How It's Handled |
 |---------|-----------------|
 | **Data Source** | Static TypeScript arrays in `src/data/seed/` — compiled into the JS bundle at build time. Originally sourced from Excel files. |
-| **Data Access** | Views import seed modules directly (e.g., `import { seedMembers } from "@/data/seed"`). No async calls, no fetching. |
-| **Authentication** | Dummy login — email `hr.admin@twindix.com` + password `demo`. Session stored in `localStorage`. |
+| **Data Access** | Views import seed modules directly (e.g., `import { seedEmployees } from "@/data/seed"`). No async calls, no fetching. |
+| **Authentication** | Dummy login — email `hr.performance.admin@twindix.com` + password `demo`. Session stored in `localStorage`. |
 | **User Preferences** | Theme (dark/light), date format, and compact view are stored in `localStorage` — the only use of browser storage. |
-| **Data Generation** | Members are generated programmatically using a seeded PRNG (mulberry32) with pools of Arabic names and department-specific roles. Performance tiers vary by department for realistic distribution. |
+| **Data Generation** | Employees are generated programmatically using a seeded PRNG (mulberry32) with pools of Arabic names and department-specific roles. Performance tiers vary by department for realistic distribution. |
 | **State Management** | Zustand for UI state (sidebar). React Context for auth and theme. |
 
 ### Seed Data Modules
@@ -205,14 +214,14 @@ The app includes 700 employees across 9 departments with realistic performance d
 | Module | Description | Records |
 |---|---|---|
 | `seed/departments.ts` | Department & sub-department definitions | 9 + 9 |
-| `seed/members.ts` | Employee roster generated from Arabic name pools | 700 |
+| `seed/employees.ts` | Employee roster generated from Arabic name pools | 700 |
 | `seed/department-records.ts` | Daily performance records (last 15 working days) | 10,500 |
-| `seed/member-insights.ts` | Individual KPI & competency evaluations | 700 |
+| `seed/employee-insights.ts` | Individual KPI & competency evaluations | 700 |
 
 ### Data Sources
 
 - **Departments Insights.xlsx** — Daily task tracking per employee across 9 departments. Tracks: registration status, task counts, execution rates, work hours, planned vs unplanned work
-- **Member Insights.xlsx** — Individual performance evaluations. Tracks: KPI objectives with weighted scoring, competency assessments with behavioral levels, overall performance calculation, evidence documentation
+- **Employee Insights.xlsx** — Individual performance evaluations. Tracks: KPI objectives with weighted scoring, competency assessments with behavioral levels, overall performance calculation, evidence documentation
 
 ### What a real backend would look like:
 
@@ -249,7 +258,7 @@ src/
 │                     DepartmentCircle, StatCard, StatusBadge, ErrorBoundary
 ├── contexts/       → React contexts (Auth, Theme)
 ├── data/           → Route config, sidebar navigation, constants
-│   └── seed/       → All seed data modules (departments, members, records, insights)
+│   └── seed/       → All seed data modules (departments, employees, records, insights)
 ├── enums/          → TypeScript enums (Theme, PerformanceStatus, RegistrationStatus)
 ├── hooks/          → Custom hooks
 │   └── shared/     → useAuth, useTheme, useCountUp, useLocalStorage,
@@ -264,9 +273,9 @@ src/
 └── views/          → Page views
     ├── auth/login/      → Login page with demo credentials
     ├── dashboard/       → Department circles overview
-    ├── departments/hr/  → HR employee tables with filters & pagination
-    ├── members/profile/ → Individual member performance history
-    ├── members/insights/→ Member KPI & competency evaluation
+    ├── departments/hr/  → HR sections radial overview + performance management table
+    ├── employees/profile/ → Individual employee performance history
+    ├── employees/insights/→ Employee KPI & competency evaluation
     ├── settings/        → App settings (theme, compact, date format)
     ├── profile/         → User profile page
     └── errors/          → 404 and 500 error pages
@@ -280,6 +289,6 @@ PROPRIETARY — Twindix Global Inc.
 
 ## Author
 
-**[Mohamed Elhawary](https://hawary.dev)** 
+**[Twindix Global Inc.](https://twindix.com)** 
 
-Based on the original *Departments Insights* and *Member Insights* Excel data sources — a comprehensive dataset of daily employee task tracking and periodic performance evaluations across 9 company departments.
+Based on the original *Departments Insights* and *Employee Insights* Excel data sources — a comprehensive dataset of daily employee task tracking and periodic performance evaluations across 9 company departments.

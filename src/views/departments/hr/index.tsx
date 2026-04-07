@@ -1,14 +1,15 @@
-import { useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
-import { ArrowRight, Eye, Filter, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search, X, Loader2 } from "lucide-react";
-import { Header, ProgressBar, DataTable } from "@/components/shared";
-import { useDeferredLoad } from "@/hooks";
+import { useMemo, useCallback } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { ArrowLeft, Eye, Filter, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search, X, Loader2 } from "lucide-react";
+import { Header, ProgressBar, DataTable, type SortState, type SortDirection } from "@/components/shared";
+import { useDeferredLoad, usePageTitle } from "@/hooks";
 import { Button, Input, Badge } from "@/atoms";
 import { Tabs, TabsList, TabsTrigger, TabsContent, Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/ui";
-import { routesData, getMemberProfilePath, getMemberInsightsPath } from "@/data";
-import { seedDepartmentRecords, seedSubDepartments, seedMembers } from "@/data/seed";
+import { routesData, getEmployeeProfilePath, getEmployeeInsightsPath } from "@/data";
+import { seedDepartmentRecords, seedSubDepartments, seedEmployees } from "@/data/seed";
+import { getTenureInfo, TENURE_FILTER_LABELS, type TenureFilter } from "@/utils";
 import type {
-    MemberInterface,
+    EmployeeInterface,
     DepartmentDailyRecordInterface,
 } from "@/interfaces";
 
@@ -16,17 +17,23 @@ const PAGE_SIZE_OPTIONS = [5, 10, 20, 50];
 
 type PerformanceFilter = "all" | "excellent" | "good" | "average" | "weak";
 
-function calculateMemberPerformance(
-    memberId: string,
+// Calculate employee performance for the last 7 days (last week)
+function calculateEmployeePerformance(
+    employeeId: string,
     records: DepartmentDailyRecordInterface[]
 ): number {
-    const memberRecords = records.filter(
-        (r) => r.memberId === memberId && r.executedWorkPercentage > 0
+    const now = new Date();
+    const weekAgo = new Date(now);
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    const weekAgoMs = weekAgo.getTime();
+
+    const employeeRecords = records.filter(
+        (r) => r.employeeId === employeeId && r.executedWorkPercentage > 0 && new Date(r.date).getTime() >= weekAgoMs
     );
-    if (memberRecords.length === 0) return 65;
+    if (employeeRecords.length === 0) return 0;
     const avg =
-        memberRecords.reduce((s, r) => s + r.executedWorkPercentage, 0) /
-        memberRecords.length;
+        employeeRecords.reduce((s, r) => s + r.executedWorkPercentage, 0) /
+        employeeRecords.length;
     return Math.round(avg * 100);
 }
 
@@ -38,7 +45,7 @@ function getPerformanceCategory(perf: number): PerformanceFilter {
 }
 
 const PERF_FILTER_LABELS: Record<PerformanceFilter, string> = {
-    all: "جميع المستويات",
+    all: "جميع مستويات الأداء",
     excellent: "ممتاز (٩٠%+)",
     good: "جيد (٧٥-٨٩%)",
     average: "متوسط (٦٠-٧٤%)",
@@ -46,37 +53,73 @@ const PERF_FILTER_LABELS: Record<PerformanceFilter, string> = {
 };
 
 interface FilteredTableProps {
-    members: MemberInterface[];
+    employees: EmployeeInterface[];
     records: DepartmentDailyRecordInterface[];
     navigate: ReturnType<typeof useNavigate>;
     deptLabel: string;
 }
 
-function FilteredTable({ members, records, navigate, deptLabel }: FilteredTableProps) {
-    const [searchQuery, setSearchQuery] = useState("");
-    const [roleFilter, setRoleFilter] = useState("all");
-    const [perfFilter, setPerfFilter] = useState<PerformanceFilter>("all");
-    const [currentPage, setCurrentPage] = useState(1);
-    const [pageSize, setPageSize] = useState(10);
+function FilteredTable({ employees, records, navigate, deptLabel }: FilteredTableProps) {
+    const [searchParams, setSearchParams] = useSearchParams();
+
+    // Read all filter/page/sort state from URL
+    const searchQuery = searchParams.get("q") || "";
+    const roleFilter = searchParams.get("role") || "all";
+    const perfFilter = (searchParams.get("perf") || "all") as PerformanceFilter;
+    const tenureFilter = (searchParams.get("tenure") || "all") as TenureFilter;
+    const currentPage = Number(searchParams.get("page")) || 1;
+    const pageSize = Number(searchParams.get("limit")) || 10;
+
+    // Parse sort state from URL: "name:asc,performance:desc"
+    const sortState: SortState[] = useMemo(() => {
+        const raw = searchParams.get("sort") || "";
+        if (!raw) return [];
+        return raw.split(",").map((s) => {
+            const [key, dir] = s.split(":");
+            return { key, direction: (dir || "asc") as SortDirection };
+        }).filter((s) => s.key && s.direction);
+    }, [searchParams]);
+
+    // Helper to update a single URL param
+    const setParam = useCallback((key: string, value: string, resetPage = true) => {
+        setSearchParams((prev) => {
+            if (value === "" || value === "all") {
+                prev.delete(key);
+            } else {
+                prev.set(key, value);
+            }
+            if (resetPage && key !== "page") prev.set("page", "1");
+            return prev;
+        }, { replace: true });
+    }, [setSearchParams]);
+
+    const setSearchQuery = (v: string) => setParam("q", v);
+    const setRoleFilter = (v: string) => setParam("role", v);
+    const setPerfFilter = (v: string) => setParam("perf", v);
+    const setTenureFilter = (v: string) => setParam("tenure", v);
+    const setCurrentPage = (v: number) => setParam("page", String(v), false);
+    const setPageSize = (v: number) => {
+        setSearchParams((prev) => { prev.set("limit", String(v)); prev.set("page", "1"); return prev; }, { replace: true });
+    };
 
     // Get unique roles
     const uniqueRoles = useMemo(() => {
-        const roles = new Set(members.map((m) => m.role));
+        const roles = new Set(employees.map((m) => m.role));
         return Array.from(roles).sort();
-    }, [members]);
+    }, [employees]);
 
     // Performance cache
     const performanceMap = useMemo(() => {
         const map = new Map<string, number>();
-        members.forEach((m) => {
-            map.set(m.id, calculateMemberPerformance(m.id, records));
+        employees.forEach((m) => {
+            map.set(m.id, calculateEmployeePerformance(m.id, records));
         });
         return map;
-    }, [members, records]);
+    }, [employees, records]);
 
     // Filtered members
-    const filteredMembers = useMemo(() => {
-        let result = members;
+    const filteredEmployees = useMemo(() => {
+        let result = employees;
 
         // Search by name
         if (searchQuery.trim()) {
@@ -97,54 +140,127 @@ function FilteredTable({ members, records, navigate, deptLabel }: FilteredTableP
             });
         }
 
+        // Filter by tenure
+        if (tenureFilter !== "all") {
+            result = result.filter((m) => {
+                const t = getTenureInfo(m.joiningDate);
+                if (tenureFilter === "new") return t.isNewJoiner;
+                if (tenureFilter === "senior") return t.isSenior;
+                return !t.isNewJoiner && !t.isSenior;
+            });
+        }
+
         return result;
-    }, [members, searchQuery, roleFilter, perfFilter, performanceMap]);
+    }, [employees, searchQuery, roleFilter, perfFilter, tenureFilter, performanceMap]);
+
+    // Sort handler — persists to URL
+    const handleSort = useCallback((key: string) => {
+        setSearchParams((prev) => {
+            const raw = prev.get("sort") || "";
+            const parts = raw ? raw.split(",").map((s) => { const [k, d] = s.split(":"); return { key: k, dir: d }; }) : [];
+            const existing = parts.find((s) => s.key === key);
+            let newParts;
+            if (!existing) {
+                newParts = [...parts, { key, dir: "asc" }];
+            } else if (existing.dir === "asc") {
+                newParts = parts.map((s) => s.key === key ? { ...s, dir: "desc" } : s);
+            } else {
+                newParts = parts.filter((s) => s.key !== key);
+            }
+            if (newParts.length === 0) {
+                prev.delete("sort");
+            } else {
+                prev.set("sort", newParts.map((s) => `${s.key}:${s.dir}`).join(","));
+            }
+            return prev;
+        }, { replace: true });
+    }, [setSearchParams]);
+
+    // Apply sorting
+    const sortedEmployees = useMemo(() => {
+        if (sortState.length === 0) return filteredEmployees;
+        return [...filteredEmployees].sort((a, b) => {
+            for (const { key, direction } of sortState) {
+                if (!direction) continue;
+                const mul = direction === "asc" ? 1 : -1;
+                if (key === "name") {
+                    const cmp = a.name.localeCompare(b.name, "ar");
+                    if (cmp !== 0) return cmp * mul;
+                } else if (key === "performance") {
+                    const pa = performanceMap.get(a.id) ?? 0;
+                    const pb = performanceMap.get(b.id) ?? 0;
+                    if (pa !== pb) return (pa - pb) * mul;
+                }
+            }
+            return 0;
+        });
+    }, [filteredEmployees, sortState, performanceMap]);
 
     // Pagination
-    const totalPages = Math.max(1, Math.ceil(filteredMembers.length / pageSize));
+    const totalPages = Math.max(1, Math.ceil(sortedEmployees.length / pageSize));
     const safeCurrentPage = Math.min(currentPage, totalPages);
-    const paginatedMembers = filteredMembers.slice(
+    const paginatedEmployees = sortedEmployees.slice(
         (safeCurrentPage - 1) * pageSize,
         safeCurrentPage * pageSize
     );
     const startIndex = (safeCurrentPage - 1) * pageSize + 1;
-    const endIndex = Math.min(safeCurrentPage * pageSize, filteredMembers.length);
+    const endIndex = Math.min(safeCurrentPage * pageSize, sortedEmployees.length);
 
-    // Reset page when filters change
-    const handleFilterChange = () => setCurrentPage(1);
-
-    // Department overall performance (always from ALL members, not affected by filters)
+    // Department overall performance (always from ALL employees, not affected by filters)
     const deptPerformance =
-        members.length > 0
+        employees.length > 0
             ? Math.round(
-                  members.reduce(
+                  employees.reduce(
                       (sum, m) => sum + (performanceMap.get(m.id) ?? 0),
                       0
-                  ) / members.length
+                  ) / employees.length
               )
             : 0;
 
-    const hasActiveFilters = searchQuery || roleFilter !== "all" || perfFilter !== "all";
+    const hasActiveFilters = searchQuery || roleFilter !== "all" || perfFilter !== "all" || tenureFilter !== "all";
 
     const clearFilters = () => {
-        setSearchQuery("");
-        setRoleFilter("all");
-        setPerfFilter("all");
-        setCurrentPage(1);
+        setSearchParams((prev) => {
+            prev.delete("q");
+            prev.delete("role");
+            prev.delete("perf");
+            prev.delete("tenure");
+            prev.set("page", "1");
+            return prev;
+        }, { replace: true });
     };
 
     const columns = [
         {
             key: "name",
             header: "اسم الموظف",
-            render: (m: MemberInterface) => (
-                <span className="font-medium hover:underline hover:text-[var(--color-primary)] transition-colors cursor-pointer">{m.name}</span>
-            ),
+            sortable: true,
+            render: (m: EmployeeInterface) => {
+                const t = getTenureInfo(m.joiningDate);
+                const perf = performanceMap.get(m.id) ?? 0;
+                return (
+                    <span className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-medium hover:underline hover:text-[var(--color-primary)] transition-colors cursor-pointer">{m.name}</span>
+                        {t.isNewJoiner && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-emerald-500/15 text-emerald-400 animate-pulse whitespace-nowrap">جديد</span>
+                        )}
+                        {t.isSenior && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-amber-500/15 text-amber-400 badge-shimmer whitespace-nowrap">قديم</span>
+                        )}
+                        {perf >= 90 && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-yellow-500/15 text-yellow-400 badge-star whitespace-nowrap">متفوق</span>
+                        )}
+                        {perf > 0 && perf < 50 && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-red-500/15 text-red-400 badge-low whitespace-nowrap">منخفض</span>
+                        )}
+                    </span>
+                );
+            },
         },
         {
             key: "role",
             header: "الدور",
-            render: (m: MemberInterface) => (
+            render: (m: EmployeeInterface) => (
                 <span className="text-[var(--color-text-muted)]">
                     {m.role}
                 </span>
@@ -153,7 +269,7 @@ function FilteredTable({ members, records, navigate, deptLabel }: FilteredTableP
         {
             key: "department",
             header: "القسم",
-            render: (m: MemberInterface) => (
+            render: (m: EmployeeInterface) => (
                 <span className="text-[var(--color-text-muted)] text-xs">
                     {m.subDepartmentName}
                 </span>
@@ -162,8 +278,9 @@ function FilteredTable({ members, records, navigate, deptLabel }: FilteredTableP
         },
         {
             key: "performance",
-            header: "الأداء",
-            render: (m: MemberInterface) => {
+            header: "أداء الأسبوع",
+            sortable: true,
+            render: (m: EmployeeInterface) => {
                 const perf = performanceMap.get(m.id) ?? 0;
                 return (
                     <ProgressBar
@@ -179,13 +296,13 @@ function FilteredTable({ members, records, navigate, deptLabel }: FilteredTableP
         {
             key: "actions",
             header: "تفاصيل",
-            render: (m: MemberInterface) => (
+            render: (m: EmployeeInterface) => (
                 <Button
                     variant="ghost"
                     size="sm"
                     onClick={(e) => {
                         e.stopPropagation();
-                        navigate(getMemberInsightsPath(m.id));
+                        navigate(getEmployeeInsightsPath(m.id));
                     }}
                     className="gap-1"
                 >
@@ -221,7 +338,6 @@ function FilteredTable({ members, records, navigate, deptLabel }: FilteredTableP
                         value={searchQuery}
                         onChange={(e) => {
                             setSearchQuery(e.target.value);
-                            handleFilterChange();
                         }}
                         className="pr-9 h-9 text-sm"
                     />
@@ -232,7 +348,6 @@ function FilteredTable({ members, records, navigate, deptLabel }: FilteredTableP
                     value={roleFilter}
                     onValueChange={(v) => {
                         setRoleFilter(v);
-                        handleFilterChange();
                     }}
                 >
                     <SelectTrigger className="w-[180px] h-9 text-sm">
@@ -253,7 +368,6 @@ function FilteredTable({ members, records, navigate, deptLabel }: FilteredTableP
                     value={perfFilter}
                     onValueChange={(v) => {
                         setPerfFilter(v as PerformanceFilter);
-                        handleFilterChange();
                     }}
                 >
                     <SelectTrigger className="w-[180px] h-9 text-sm">
@@ -261,6 +375,27 @@ function FilteredTable({ members, records, navigate, deptLabel }: FilteredTableP
                     </SelectTrigger>
                     <SelectContent>
                         {(Object.entries(PERF_FILTER_LABELS) as [PerformanceFilter, string][]).map(
+                            ([key, label]) => (
+                                <SelectItem key={key} value={key}>
+                                    {label}
+                                </SelectItem>
+                            )
+                        )}
+                    </SelectContent>
+                </Select>
+
+                {/* Tenure filter */}
+                <Select
+                    value={tenureFilter}
+                    onValueChange={(v) => {
+                        setTenureFilter(v as TenureFilter);
+                    }}
+                >
+                    <SelectTrigger className="w-[180px] h-9 text-sm">
+                        <SelectValue placeholder="مدة الخدمة" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {(Object.entries(TENURE_FILTER_LABELS) as [TenureFilter, string][]).map(
                             ([key, label]) => (
                                 <SelectItem key={key} value={key}>
                                     {label}
@@ -288,12 +423,12 @@ function FilteredTable({ members, records, navigate, deptLabel }: FilteredTableP
             {hasActiveFilters && (
                 <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs text-[var(--color-text-muted)]">
-                        {filteredMembers.length} نتيجة
+                        {filteredEmployees.length} نتيجة
                     </span>
                     {searchQuery && (
                         <Badge variant="secondary" className="gap-1">
                             بحث: {searchQuery}
-                            <button onClick={() => { setSearchQuery(""); handleFilterChange(); }} className="cursor-pointer">
+                            <button onClick={() => { setSearchQuery(""); }} className="cursor-pointer">
                                 <X className="h-3 w-3" />
                             </button>
                         </Badge>
@@ -301,7 +436,7 @@ function FilteredTable({ members, records, navigate, deptLabel }: FilteredTableP
                     {roleFilter !== "all" && (
                         <Badge variant="secondary" className="gap-1">
                             الدور: {roleFilter}
-                            <button onClick={() => { setRoleFilter("all"); handleFilterChange(); }} className="cursor-pointer">
+                            <button onClick={() => { setRoleFilter("all"); }} className="cursor-pointer">
                                 <X className="h-3 w-3" />
                             </button>
                         </Badge>
@@ -309,7 +444,15 @@ function FilteredTable({ members, records, navigate, deptLabel }: FilteredTableP
                     {perfFilter !== "all" && (
                         <Badge variant="secondary" className="gap-1">
                             الأداء: {PERF_FILTER_LABELS[perfFilter]}
-                            <button onClick={() => { setPerfFilter("all"); handleFilterChange(); }} className="cursor-pointer">
+                            <button onClick={() => { setPerfFilter("all"); }} className="cursor-pointer">
+                                <X className="h-3 w-3" />
+                            </button>
+                        </Badge>
+                    )}
+                    {tenureFilter !== "all" && (
+                        <Badge variant="secondary" className="gap-1">
+                            مدة الخدمة: {TENURE_FILTER_LABELS[tenureFilter]}
+                            <button onClick={() => { setTenureFilter("all"); }} className="cursor-pointer">
                                 <X className="h-3 w-3" />
                             </button>
                         </Badge>
@@ -320,17 +463,19 @@ function FilteredTable({ members, records, navigate, deptLabel }: FilteredTableP
             {/* Table */}
             <DataTable
                 columns={columns}
-                data={paginatedMembers}
-                onRowClick={(m) => navigate(getMemberProfilePath(m.id))}
+                data={paginatedEmployees}
+                onRowClick={(m) => navigate(getEmployeeProfilePath(m.id))}
                 emptyMessage="لا توجد نتائج مطابقة للتصفية"
+                sortState={sortState}
+                onSort={handleSort}
             />
 
             {/* Pagination */}
-            {filteredMembers.length > 0 && (
+            {filteredEmployees.length > 0 && (
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-t border-[var(--color-border)] pt-3">
                     <div className="flex items-center gap-2 text-sm text-[var(--color-text-muted)]">
                         <span>
-                            عرض {startIndex} - {endIndex} من {filteredMembers.length}
+                            عرض {startIndex} - {endIndex} من {filteredEmployees.length}
                         </span>
                         <span className="text-[var(--color-border)]">|</span>
                         <div className="flex items-center gap-1.5">
@@ -339,7 +484,6 @@ function FilteredTable({ members, records, navigate, deptLabel }: FilteredTableP
                                 value={String(pageSize)}
                                 onValueChange={(v) => {
                                     setPageSize(Number(v));
-                                    setCurrentPage(1);
                                 }}
                             >
                                 <SelectTrigger className="w-[68px] h-8 text-xs">
@@ -371,7 +515,7 @@ function FilteredTable({ members, records, navigate, deptLabel }: FilteredTableP
                             size="icon"
                             className="h-8 w-8"
                             disabled={safeCurrentPage <= 1}
-                            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                            onClick={() => setCurrentPage(Math.max(1, safeCurrentPage - 1))}
                         >
                             <ChevronRight className="h-4 w-4" />
                         </Button>
@@ -385,7 +529,7 @@ function FilteredTable({ members, records, navigate, deptLabel }: FilteredTableP
                             size="icon"
                             className="h-8 w-8"
                             disabled={safeCurrentPage >= totalPages}
-                            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                            onClick={() => setCurrentPage(Math.min(totalPages, safeCurrentPage + 1))}
                         >
                             <ChevronLeft className="h-4 w-4" />
                         </Button>
@@ -433,17 +577,38 @@ function LoadingSkeleton() {
     );
 }
 
-export function HrDepartmentView() {
+export function HrPerformanceView() {
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
     const isReady = useDeferredLoad(200);
+    usePageTitle("تقييم وإدارة الأداء");
 
-    const members = seedMembers;
+    const tab = searchParams.get("tab") || "all";
+    const handleTabChange = useCallback(
+        (value: string) => {
+            setSearchParams((prev) => {
+                prev.set("tab", value);
+                // Reset filters that are department-specific
+                prev.delete("page");
+                prev.delete("limit");
+                prev.delete("role");
+                prev.delete("q");
+                prev.delete("perf");
+                prev.delete("tenure");
+                prev.delete("sort");
+                return prev;
+            }, { replace: true });
+        },
+        [setSearchParams]
+    );
+
+    const employees = seedEmployees;
     const records = seedDepartmentRecords;
     const subDepartments = seedSubDepartments;
 
-    const getMembers = (subDeptId?: string) => {
-        if (!subDeptId) return members;
-        return members.filter((m) => m.subDepartmentId === subDeptId);
+    const getEmployees = (subDeptId?: string) => {
+        if (!subDeptId) return employees;
+        return employees.filter((m) => m.subDepartmentId === subDeptId);
     };
 
     if (!isReady) return <LoadingSkeleton />;
@@ -451,35 +616,35 @@ export function HrDepartmentView() {
     return (
         <div className="space-y-6 animate-fade-in">
             <Header
-                title="إدارة الموارد البشرية"
-                description={`عرض تفصيلي لأداء ${members.length} موظف عبر ${subDepartments.length} أقسام داخلية`}
+                title="تقييم وإدارة الأداء"
+                description={`متابعة وتقييم أداء ${employees.length} موظف عبر ${subDepartments.length} أقسام داخلية`}
                 actions={
                     <Button
                         variant="outline"
-                        onClick={() => navigate(routesData.dashboard)}
+                        onClick={() => navigate(routesData.departmentHr)}
                         className="gap-2"
                     >
-                        <ArrowRight className="h-4 w-4" />
+                        <ArrowLeft className="h-4 w-4" />
                         العودة
                     </Button>
                 }
             />
 
-            <Tabs defaultValue="all" dir="rtl">
+            <Tabs value={tab} onValueChange={handleTabChange} dir="rtl">
                 <TabsList>
                     <TabsTrigger value="all">
-                        الكل ({members.length})
+                        الكل ({employees.length})
                     </TabsTrigger>
                     {subDepartments.map((sd) => (
                         <TabsTrigger key={sd.id} value={sd.id}>
-                            {sd.name} ({getMembers(sd.id).length})
+                            {sd.name} ({getEmployees(sd.id).length})
                         </TabsTrigger>
                     ))}
                 </TabsList>
 
                 <TabsContent value="all">
                     <FilteredTable
-                        members={getMembers()}
+                        employees={getEmployees()}
                         records={records}
                         navigate={navigate}
                         deptLabel="الأداء العام لجميع الأقسام"
@@ -489,7 +654,7 @@ export function HrDepartmentView() {
                 {subDepartments.map((sd) => (
                     <TabsContent key={sd.id} value={sd.id}>
                         <FilteredTable
-                            members={getMembers(sd.id)}
+                            employees={getEmployees(sd.id)}
                             records={records}
                             navigate={navigate}
                             deptLabel={`أداء قسم ${sd.name}`}

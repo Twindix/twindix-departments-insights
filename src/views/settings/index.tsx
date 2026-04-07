@@ -1,7 +1,7 @@
 import { Sun, Moon, Palette, Calendar, Info, Minimize2, Maximize2 } from "lucide-react";
 import { Header, SettingsSkeleton } from "@/components/shared";
 import { Card, CardHeader, CardTitle, CardContent, Button } from "@/atoms";
-import { useTheme, useSettings, useDeferredLoad } from "@/hooks";
+import { useTheme, useSettings, useDeferredLoad, usePageTitle } from "@/hooks";
 import { APP_NAME_AR, APP_VERSION } from "@/data";
 import { cn } from "@/utils";
 
@@ -32,6 +32,7 @@ export function SettingsView() {
     const { isDarkMode, onToggleTheme } = useTheme();
     const { dateFormat, compactView, onUpdateSettings } = useSettings();
     const isReady = useDeferredLoad(100);
+    usePageTitle("الإعدادات");
 
     if (!isReady) return <SettingsSkeleton />;
 
@@ -142,7 +143,7 @@ export function SettingsView() {
                         </div>
                         <div className="flex justify-between">
                             <span>المطور</span>
-                            <a href="https://hawary.dev" target="_blank" rel="noopener noreferrer" className="text-[var(--color-primary)] hover:underline">Mohamed Elhawary</a>
+                            <a href="https://twindix.com" target="_blank" rel="noopener noreferrer" className="text-[var(--color-primary)] hover:underline" dir="ltr">Twindix Global Inc.</a>
                         </div>
                     </div>
                 </CardContent>

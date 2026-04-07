@@ -79,16 +79,16 @@ export function Topbar() {
                                 </span>
                             </button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start" className="w-56">
+                        <DropdownMenuContent align="end" className="w-72 px-2">
                             <DropdownMenuLabel>
-                                <div>
-                                    <p className="text-sm font-medium">
+                                <div className="space-y-1 py-1">
+                                    <p className="text-sm font-medium text-right">
                                         {user?.name}
                                     </p>
-                                    <p className="text-xs text-[var(--color-text-muted)]">
+                                    <p className="text-xs text-[var(--color-text-muted)] text-right" dir="ltr">
                                         {user?.email}
                                     </p>
-                                    <p className="text-xs text-[var(--color-text-muted)]">
+                                    <p className="text-xs text-[var(--color-text-muted)] text-right">
                                         {user?.role}
                                     </p>
                                 </div>
@@ -99,7 +99,7 @@ export function Topbar() {
                                     navigate(routesData.profile)
                                 }
                             >
-                                <User className="h-4 w-4 ml-2" />
+                                <User className="h-4 w-4 me-2" />
                                 الملف الشخصي
                             </DropdownMenuItem>
                             <DropdownMenuItem
@@ -107,7 +107,7 @@ export function Topbar() {
                                     navigate(routesData.settings)
                                 }
                             >
-                                <Settings className="h-4 w-4 ml-2" />
+                                <Settings className="h-4 w-4 me-2" />
                                 الإعدادات
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
@@ -115,7 +115,7 @@ export function Topbar() {
                                 onClick={handleLogout}
                                 className="text-[var(--color-error)]"
                             >
-                                <LogOut className="h-4 w-4 ml-2" />
+                                <LogOut className="h-4 w-4 me-2" />
                                 تسجيل الخروج
                             </DropdownMenuItem>
                         </DropdownMenuContent>

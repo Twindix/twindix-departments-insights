@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { cn } from "@/utils";
 
 interface HeaderProps {
-    title: string;
+    title: ReactNode;
     description?: string;
     actions?: ReactNode;
     className?: string;

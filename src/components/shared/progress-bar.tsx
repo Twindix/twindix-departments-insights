@@ -42,8 +42,11 @@ export function ProgressBar({
         if (animated) {
             const timer = requestAnimationFrame(() => setWidth(percentage));
             return () => cancelAnimationFrame(timer);
+        } else {
+            // Use rAF for non-animated too to avoid direct setState in effect
+            const timer = requestAnimationFrame(() => setWidth(percentage));
+            return () => cancelAnimationFrame(timer);
         }
-        setWidth(percentage);
     }, [percentage, animated]);
 
     return (

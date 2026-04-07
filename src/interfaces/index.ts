@@ -11,12 +11,19 @@ export type {
 } from "./departments";
 
 export type {
-    MemberInterface,
+    EmployeeInterface,
     ObjectiveInterface,
     CompetencyRatingInterface,
     CompetencyInterface,
     OverallPerformanceInterface,
     EvidenceInterface,
     CoreCompetencyInterface,
-    MemberInsightsInterface,
-} from "./members";
+    EmployeeInsightsInterface,
+} from "./employees";
+
+export type {
+    WorkExperienceInterface,
+    CertificationInterface,
+    CourseInterface,
+    EmployeeCvInterface,
+} from "./cv";

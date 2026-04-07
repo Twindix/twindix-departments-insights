@@ -66,7 +66,7 @@ export function ProfileSkeleton() {
     );
 }
 
-export function MemberProfileSkeleton() {
+export function EmployeeProfileSkeleton() {
     return (
         <div className="space-y-6 animate-fade-in">
             {/* Header */}
@@ -102,7 +102,7 @@ export function MemberProfileSkeleton() {
     );
 }
 
-export function MemberInsightsSkeleton() {
+export function EmployeeInsightsSkeleton() {
     return (
         <div className="space-y-6 animate-fade-in">
             {/* Header */}

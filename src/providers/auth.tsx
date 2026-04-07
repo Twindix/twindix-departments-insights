@@ -9,19 +9,25 @@ interface AuthProviderProps {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
-    const [user, setUser] = useState<UserInterface | null>(() =>
-        getStorageItem<UserInterface>(storageKeys.authUser)
-    );
+    const [user, setUser] = useState<UserInterface | null>(() => {
+        const stored = getStorageItem<UserInterface>(storageKeys.authUser);
+        // Clear stale cached user from previous version
+        if (stored && stored.name !== "سارة السعداوي") {
+            removeStorageItem(storageKeys.authUser);
+            return null;
+        }
+        return stored;
+    });
 
     const onLogin = useCallback((email: string, password: string): boolean => {
         if (password !== DEMO_PASSWORD) return false;
 
         const adminUser: UserInterface = {
             id: "admin-001",
-            name: "محمد إسماعيل",
+            name: "سارة السعداوي",
             email,
-            role: "مدير الموارد البشرية",
-            avatar: "مإ",
+            role: "مسؤولة تقييم وإدارة الأداء - إدارة الموارد البشرية",
+            avatar: "سس",
         };
 
         setStorageItem(storageKeys.authUser, adminUser);
