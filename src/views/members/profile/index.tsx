@@ -1,0 +1,923 @@
+import { useState, useMemo, useRef, useCallback } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import {
+    ArrowRight,
+    ClipboardList,
+    CheckCircle2,
+    XCircle,
+    Clock,
+    TrendingUp,
+    Eye,
+    CalendarDays,
+} from "lucide-react";
+import { Header, StatCard, ProgressBar, DatePicker, MemberProfileSkeleton } from "@/components/shared";
+import { Button, Card, CardHeader, CardTitle, CardContent, Badge } from "@/atoms";
+import { useSettings, useDeferredLoad } from "@/hooks";
+import { getMemberInsightsPath } from "@/data";
+import { seedDepartmentRecords, seedMembers } from "@/data/seed";
+
+interface ChartPoint {
+    x: number;
+    y: number;
+    date: string;
+    value: number;
+}
+
+function TrendChart({
+    points,
+    formatDate,
+}: {
+    points: ChartPoint[];
+    formatDate: (d: string, f?: "short" | "long" | "iso") => string;
+}) {
+    const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+    const overlayRef = useRef<HTMLDivElement>(null);
+
+    // Percentages for layout (CSS-based, not SVG viewBox)
+    const chartLeft = 6;   // % from right for Y-axis labels
+    const chartBottom = 14; // % from bottom for X-axis labels
+
+    // Map points to percentage positions within the chart area
+    const mapped = points.map((p) => ({
+        ...p,
+        pctX: chartLeft + (p.x / 100) * (100 - chartLeft - 2),
+        pctY: (p.y / 100) * (100 - chartBottom),
+    }));
+
+    // SVG polyline in a viewBox that matches the chart area
+    const svgW = 100 - chartLeft - 2;
+    const svgH = 100 - chartBottom;
+
+    const svgPoints = points.map((p) => ({
+        sx: (p.x / 100) * svgW,
+        sy: (p.y / 100) * svgH,
+    }));
+
+    const handleMouseMove = useCallback(
+        (e: React.MouseEvent<HTMLDivElement>) => {
+            const overlay = overlayRef.current;
+            if (!overlay || points.length === 0) return;
+
+            const rect = overlay.getBoundingClientRect();
+            // In RTL, the chart area starts from the right side
+            // The overlay covers the chart drawing area (left:0 to right:chartLeft+2%)
+            // Mouse position as percentage from the RIGHT edge (RTL)
+            const xFromRight = ((rect.right - e.clientX) / rect.width) * 100;
+
+            // Find nearest point by comparing mapped pctX (which is from right)
+            // But our overlay only covers the chart area, so we need to map
+            // xFromRight (0-100 of overlay) to the point's x (0-100 range)
+            // The overlay width corresponds to (100 - chartLeft - 2)% of the container
+            // Points' x values go 0-100 within that same range
+            const xPct = (xFromRight / 100) * 100; // percentage within the overlay = point x
+
+            let nearest = 0;
+            let minDist = Infinity;
+            for (let i = 0; i < points.length; i++) {
+                const dist = Math.abs(points[i].x - xPct);
+                if (dist < minDist) {
+                    minDist = dist;
+                    nearest = i;
+                }
+            }
+            setHoveredIndex(nearest);
+        },
+        [points, chartLeft]
+    );
+
+    const handleMouseLeave = useCallback(() => {
+        setHoveredIndex(null);
+    }, []);
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle className="text-base">
+                    اتجاه الأداء عبر الزمن
+                </CardTitle>
+            </CardHeader>
+            <CardContent>
+                <div
+                    className="relative w-full select-none"
+                    style={{ height: 280 }}
+                    onMouseLeave={handleMouseLeave}
+                >
+                    {/* Y-axis labels (HTML) */}
+                    {[0, 25, 50, 75, 100].map((val) => {
+                        const topPct = ((100 - val) / 100) * (100 - chartBottom);
+                        return (
+                            <div
+                                key={val}
+                                className="absolute text-xs font-medium text-[var(--color-text-muted)] tabular-nums"
+                                style={{
+                                    top: `${topPct}%`,
+                                    right: 0,
+                                    transform: "translateY(-50%)",
+                                    width: `${chartLeft}%`,
+                                    textAlign: "center",
+                                }}
+                            >
+                                %{val}
+                            </div>
+                        );
+                    })}
+
+                    {/* Grid lines (HTML divs for crisp rendering) */}
+                    {[0, 25, 50, 75, 100].map((val) => {
+                        const topPct = ((100 - val) / 100) * (100 - chartBottom);
+                        return (
+                            <div
+                                key={`grid-${val}`}
+                                className="absolute border-t border-dashed border-[var(--color-border)]"
+                                style={{
+                                    top: `${topPct}%`,
+                                    left: 0,
+                                    right: `${chartLeft + 1}%`,
+                                }}
+                            />
+                        );
+                    })}
+
+                    {/* X-axis labels (HTML) */}
+                    {mapped.map((p, i) => {
+                        const showLabel = mapped.length <= 7 || i % 2 === 0 || i === mapped.length - 1;
+                        if (!showLabel) return null;
+                        const d = new Date(p.date);
+                        const label = `${d.getDate()}/${d.getMonth() + 1}`;
+                        return (
+                            <div
+                                key={`x-${i}`}
+                                className="absolute text-xs font-medium text-[var(--color-text-muted)] tabular-nums whitespace-nowrap"
+                                style={{
+                                    bottom: 0,
+                                    right: `${p.pctX - 1.5}%`,
+                                    height: `${chartBottom - 2}%`,
+                                    display: "flex",
+                                    alignItems: "center",
+                                }}
+                            >
+                                {label}
+                            </div>
+                        );
+                    })}
+
+                    {/* SVG chart area (line + area) */}
+                    <svg
+                        viewBox={`0 0 ${svgW} ${svgH}`}
+                        className="absolute"
+                        style={{
+                            top: 0,
+                            left: 0,
+                            width: `${100 - chartLeft - 2}%`,
+                            height: `${100 - chartBottom}%`,
+                        }}
+                        preserveAspectRatio="none"
+                    >
+                        {/* Area fill */}
+                        <polygon
+                            points={`${svgPoints.map((p) => `${p.sx},${p.sy}`).join(" ")} ${svgPoints[svgPoints.length - 1].sx},${svgH} ${svgPoints[0].sx},${svgH}`}
+                            fill="var(--color-primary)"
+                            fillOpacity="0.08"
+                        />
+                        {/* Line */}
+                        <polyline
+                            points={svgPoints.map((p) => `${p.sx},${p.sy}`).join(" ")}
+                            fill="none"
+                            stroke="var(--color-primary)"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            vectorEffect="non-scaling-stroke"
+                            className="chart-line-reveal"
+                        />
+                    </svg>
+
+                    {/* Vertical hover line (HTML for correct RTL positioning) */}
+                    {hoveredIndex !== null && (
+                        <div
+                            className="absolute border-r border-dashed border-[var(--color-primary)] opacity-40 pointer-events-none"
+                            style={{
+                                right: `${mapped[hoveredIndex].pctX}%`,
+                                top: 0,
+                                height: `${100 - chartBottom}%`,
+                                zIndex: 3,
+                            }}
+                        />
+                    )}
+
+                    {/* Transparent overlay for hover-anywhere detection */}
+                    <div
+                        ref={overlayRef}
+                        className="absolute cursor-crosshair"
+                        style={{
+                            top: 0,
+                            left: 0,
+                            width: `${100 - chartLeft - 2}%`,
+                            height: `${100 - chartBottom}%`,
+                            zIndex: 4,
+                        }}
+                        onMouseMove={handleMouseMove}
+                    />
+
+                    {/* Dots as HTML (so they don't get distorted) */}
+                    {mapped.map((p, i) => (
+                        <div
+                            key={`dot-${i}`}
+                            className="absolute pointer-events-none"
+                            style={{
+                                right: `${p.pctX}%`,
+                                top: `${p.pctY}%`,
+                                transform: "translate(50%, -50%)",
+                                zIndex: hoveredIndex === i ? 5 : 2,
+                            }}
+                        >
+                            {/* Pulse ring */}
+                            {hoveredIndex === i && (
+                                <div
+                                    className="absolute rounded-full bg-[var(--color-primary)] opacity-15"
+                                    style={{ inset: -6 }}
+                                />
+                            )}
+                            {/* Dot */}
+                            <div
+                                className="rounded-full transition-all duration-150"
+                                style={{
+                                    width: hoveredIndex === i ? 12 : 8,
+                                    height: hoveredIndex === i ? 12 : 8,
+                                    margin: hoveredIndex === i ? 0 : 2,
+                                    backgroundColor: hoveredIndex === i ? "var(--color-bg)" : "var(--color-primary)",
+                                    border: `2px solid var(--color-primary)`,
+                                    opacity: 0,
+                                    animation: `fade-in 0.3s ease-out ${0.5 + i * 0.1}s forwards`,
+                                }}
+                            />
+                        </div>
+                    ))}
+
+                    {/* Tooltip */}
+                    {hoveredIndex !== null && (
+                        <div
+                            className="absolute pointer-events-none z-10"
+                            style={{
+                                right: `${mapped[hoveredIndex].pctX}%`,
+                                top: `${mapped[hoveredIndex].pctY}%`,
+                                transform: "translate(50%, -100%) translateY(-14px)",
+                            }}
+                        >
+                            <div className="rounded-lg bg-[var(--color-text-dark)] text-[var(--color-bg)] px-3 py-2 shadow-lg text-center whitespace-nowrap animate-scale-in">
+                                <p className="text-sm font-bold tabular-nums">
+                                    {points[hoveredIndex].value}%
+                                </p>
+                                <p className="text-xs opacity-75 mt-0.5">
+                                    {formatDate(points[hoveredIndex].date)}
+                                </p>
+                            </div>
+                            <div className="mx-auto w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-[var(--color-text-dark)]" />
+                        </div>
+                    )}
+
+                    <style>{`
+                        .chart-line-reveal {
+                            clip-path: inset(0 100% 0 0);
+                            animation: reveal-line 1.5s ease-out forwards;
+                        }
+                        @keyframes reveal-line {
+                            to { clip-path: inset(0 0 0 0); }
+                        }
+                    `}</style>
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
+
+type DatePreset = "6d" | "15d" | "1m" | "3m" | "6m" | "1y" | "3y" | "custom";
+
+const DATE_PRESETS: { value: DatePreset; label: string }[] = [
+    { value: "6d", label: "آخر ٦ أيام" },
+    { value: "15d", label: "آخر ١٥ يوم" },
+    { value: "1m", label: "آخر شهر" },
+    { value: "3m", label: "آخر ٣ أشهر" },
+    { value: "6m", label: "آخر ٦ أشهر" },
+    { value: "1y", label: "آخر سنة" },
+    { value: "3y", label: "آخر ٣ سنوات" },
+    { value: "custom", label: "مخصص" },
+];
+
+function getPresetStartDate(preset: DatePreset, lastDate: string): string {
+    const end = new Date(lastDate);
+    switch (preset) {
+        case "6d": { const d = new Date(end); d.setDate(d.getDate() - 6); return d.toISOString().split("T")[0]; }
+        case "15d": { const d = new Date(end); d.setDate(d.getDate() - 15); return d.toISOString().split("T")[0]; }
+        case "1m": { const d = new Date(end); d.setMonth(d.getMonth() - 1); return d.toISOString().split("T")[0]; }
+        case "3m": { const d = new Date(end); d.setMonth(d.getMonth() - 3); return d.toISOString().split("T")[0]; }
+        case "6m": { const d = new Date(end); d.setMonth(d.getMonth() - 6); return d.toISOString().split("T")[0]; }
+        case "1y": { const d = new Date(end); d.setFullYear(d.getFullYear() - 1); return d.toISOString().split("T")[0]; }
+        case "3y": { const d = new Date(end); d.setFullYear(d.getFullYear() - 3); return d.toISOString().split("T")[0]; }
+        default: return lastDate;
+    }
+}
+
+// Max 3 years back for custom
+function getMinCustomDate(lastDate: string): string {
+    const d = new Date(lastDate);
+    d.setFullYear(d.getFullYear() - 3);
+    return d.toISOString().split("T")[0];
+}
+
+const CARDS_PER_PAGE = 6;
+
+type ViewMode = "daily" | "weekly" | "monthly" | "yearly";
+const VIEW_MODE_LABELS: Record<ViewMode, string> = {
+    daily: "يومي",
+    weekly: "أسبوعي",
+    monthly: "شهري",
+    yearly: "سنوي",
+};
+
+// Determine which view modes are available based on the date range span
+function getAvailableViewModes(startDate: string, endDate: string): ViewMode[] {
+    const start = new Date(startDate).getTime();
+    const end = new Date(endDate).getTime();
+    const days = (end - start) / (1000 * 60 * 60 * 24);
+    const modes: ViewMode[] = ["daily"];
+    if (days > 14) modes.push("weekly");
+    if (days > 60) modes.push("monthly");
+    if (days > 365) modes.push("yearly");
+    return modes;
+}
+
+// Group dates by the selected view mode and return group keys
+function groupDatesByMode(dates: string[], mode: ViewMode): Map<string, string[]> {
+    const groups = new Map<string, string[]>();
+    for (const date of dates) {
+        const d = new Date(date);
+        let key: string;
+        switch (mode) {
+            case "weekly": {
+                const weekStart = new Date(d);
+                weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+                key = weekStart.toISOString().split("T")[0];
+                break;
+            }
+            case "monthly":
+                key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+                break;
+            case "yearly":
+                key = `${d.getFullYear()}`;
+                break;
+            default:
+                key = date;
+        }
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key)!.push(date);
+    }
+    return groups;
+}
+
+function formatGroupKey(key: string, mode: ViewMode): string {
+    switch (mode) {
+        case "weekly": {
+            const d = new Date(key);
+            const end = new Date(d);
+            end.setDate(end.getDate() + 6);
+            return `${d.getDate()}/${d.getMonth() + 1} — ${end.getDate()}/${end.getMonth() + 1}`;
+        }
+        case "monthly": {
+            const [y, m] = key.split("-");
+            const d = new Date(Number(y), Number(m) - 1);
+            return d.toLocaleDateString("ar-EG", { year: "numeric", month: "long" });
+        }
+        case "yearly":
+            return key;
+        default:
+            return key; // daily — formatted by caller using formatDate
+    }
+}
+
+interface DepartmentDailyRecordAggregated {
+    totalTasks: number;
+    executedTasks: number;
+    unexecutedTasks: number;
+    planned: number;
+    unplanned: number;
+    dailyWorkHours: number;
+    actualHours: number;
+    lostHours: number;
+    workPercentage: number;
+    executedWorkPercentage: number;
+    registrationStatus: string;
+    count: number;
+}
+
+function aggregateRecords(records: { totalTasks: number; executedTasks: number; unexecutedTasks: number; planned: number; unplanned: number; dailyWorkHours: number; actualHours: number; lostHours: number; workPercentage: number; executedWorkPercentage: number; registrationStatus: string }[]): DepartmentDailyRecordAggregated {
+    const active = records.filter((r) => r.totalTasks > 0);
+    return {
+        totalTasks: records.reduce((s, r) => s + r.totalTasks, 0),
+        executedTasks: records.reduce((s, r) => s + r.executedTasks, 0),
+        unexecutedTasks: records.reduce((s, r) => s + r.unexecutedTasks, 0),
+        planned: records.reduce((s, r) => s + r.planned, 0),
+        unplanned: records.reduce((s, r) => s + r.unplanned, 0),
+        dailyWorkHours: records.reduce((s, r) => s + r.dailyWorkHours, 0),
+        actualHours: Math.round(records.reduce((s, r) => s + r.actualHours, 0) * 10) / 10,
+        lostHours: Math.round(records.reduce((s, r) => s + Math.max(0, r.lostHours), 0) * 10) / 10,
+        workPercentage: active.length > 0 ? active.reduce((s, r) => s + r.workPercentage, 0) / active.length : 0,
+        executedWorkPercentage: active.length > 0 ? active.reduce((s, r) => s + r.executedWorkPercentage, 0) / active.length : 0,
+        registrationStatus: records.every((r) => r.registrationStatus === "تم") ? "تم" : records.every((r) => r.registrationStatus === "أجازة") ? "أجازة" : records.some((r) => r.registrationStatus === "تم") ? "تم" : "لم يتم",
+        count: records.length,
+    };
+}
+
+function ViewModeSelector({ mode, onChange, availableModes }: { mode: ViewMode; onChange: (m: ViewMode) => void; availableModes: ViewMode[] }) {
+    if (availableModes.length <= 1) return null;
+    return (
+        <div className="flex items-center gap-1">
+            {availableModes.map((m) => (
+                <button
+                    key={m}
+                    onClick={() => onChange(m)}
+                    className={`px-2 py-1 text-[10px] rounded-md cursor-pointer transition-colors ${
+                        mode === m
+                            ? "bg-[var(--color-primary)] text-white"
+                            : "bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-hover)]"
+                    }`}
+                >
+                    {VIEW_MODE_LABELS[m]}
+                </button>
+            ))}
+        </div>
+    );
+}
+
+export function MemberProfileView() {
+    const { id } = useParams<{ id: string }>();
+    const navigate = useNavigate();
+    const { formatDate } = useSettings();
+    const isReady = useDeferredLoad(150);
+
+    const members = seedMembers;
+    const allRecords = seedDepartmentRecords;
+    const member = members.find((m) => m.id === id);
+    const records = useMemo(
+        () =>
+            allRecords
+                .filter((r) => r.memberId === id)
+                .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()),
+        [allRecords, id]
+    );
+
+    const allUniqueDates = useMemo(
+        () => [...new Set(records.map((r) => r.date))].sort((a, b) => new Date(a).getTime() - new Date(b).getTime()),
+        [records]
+    );
+
+    const lastDate = allUniqueDates[allUniqueDates.length - 1] ?? new Date().toISOString().split("T")[0];
+
+    // Date range state
+    const [preset, setPreset] = useState<DatePreset>("6d");
+    const [startDate, setStartDate] = useState<string>(() => getPresetStartDate("6d", lastDate));
+    const [endDate, setEndDate] = useState<string>(lastDate);
+    const [cardsPage, setCardsPage] = useState(1);
+
+    const handlePreset = useCallback(
+        (p: DatePreset) => {
+            setPreset(p);
+            setCardsPage(1);
+            setTasksPage(1);
+            setHoursPage(1);
+            if (p !== "custom") {
+                setStartDate(getPresetStartDate(p, lastDate));
+                setEndDate(lastDate);
+            }
+        },
+        [lastDate]
+    );
+
+    const handleStartDate = useCallback((val: string) => {
+        setStartDate(val);
+        setPreset("custom");
+        setCardsPage(1);
+        setTasksPage(1);
+        setHoursPage(1);
+    }, []);
+
+    const handleEndDate = useCallback((val: string) => {
+        setEndDate(val);
+        setPreset("custom");
+        setCardsPage(1);
+        setTasksPage(1);
+        setHoursPage(1);
+    }, []);
+
+    const isCustom = preset === "custom";
+    const minCustom = getMinCustomDate(lastDate);
+    const [tasksPage, setTasksPage] = useState(1);
+    const [hoursPage, setHoursPage] = useState(1);
+    const [chartViewMode, setChartViewMode] = useState<ViewMode>("daily");
+    const [tasksViewMode, setTasksViewMode] = useState<ViewMode>("daily");
+    const [hoursViewMode, setHoursViewMode] = useState<ViewMode>("daily");
+    const [cardsViewMode, setCardsViewMode] = useState<ViewMode>("daily");
+    const SECTION_PAGE_SIZE = 10;
+
+    // Filtered records based on date range
+    const filteredRecords = useMemo(() => {
+        if (!startDate || !endDate) return records;
+        const start = new Date(startDate).getTime();
+        const end = new Date(endDate).getTime();
+        return records.filter((r) => {
+            const d = new Date(r.date).getTime();
+            return d >= start && d <= end;
+        });
+    }, [records, startDate, endDate]);
+
+    // Unique dates from filtered records
+    const uniqueDates = useMemo(
+        () => [...new Set(filteredRecords.map((r) => r.date))].sort((a, b) => new Date(a).getTime() - new Date(b).getTime()),
+        [filteredRecords]
+    );
+
+    // Computed stats from filtered records
+    const activeRecords = useMemo(
+        () => filteredRecords.filter((r) => r.totalTasks > 0),
+        [filteredRecords]
+    );
+
+    const totalTasks = useMemo(
+        () => filteredRecords.reduce((s, r) => s + r.totalTasks, 0),
+        [filteredRecords]
+    );
+
+    const totalExecuted = useMemo(
+        () => filteredRecords.reduce((s, r) => s + r.executedTasks, 0),
+        [filteredRecords]
+    );
+
+    const totalUnexecuted = useMemo(
+        () => filteredRecords.reduce((s, r) => s + r.unexecutedTasks, 0),
+        [filteredRecords]
+    );
+
+    const totalLostHours = useMemo(
+        () => filteredRecords.reduce((s, r) => s + Math.max(0, r.lostHours), 0),
+        [filteredRecords]
+    );
+
+    const avgPerformance = useMemo(
+        () =>
+            activeRecords.length > 0
+                ? Math.round(
+                      (activeRecords.reduce(
+                          (s, r) => s + r.executedWorkPercentage,
+                          0
+                      ) /
+                          activeRecords.length) *
+                          100
+                  )
+                : 0,
+        [activeRecords]
+    );
+
+    // Chart points from filtered active records
+    // Available view modes based on selected date range
+    const availableViewModes = useMemo(
+        () => getAvailableViewModes(startDate, endDate),
+        [startDate, endDate]
+    );
+
+    // Grouped data for each section
+    const groupedForChart = useMemo(() => {
+        const groups = groupDatesByMode(uniqueDates, chartViewMode);
+        const points: ChartPoint[] = [];
+        const entries = Array.from(groups.entries());
+        entries.forEach(([key, dates], i) => {
+            const recs = dates.flatMap((dt) => filteredRecords.filter((r) => r.date === dt && r.totalTasks > 0));
+            if (recs.length === 0) return;
+            const avg = recs.reduce((s, r) => s + r.executedWorkPercentage, 0) / recs.length;
+            points.push({
+                x: (i / Math.max(entries.length - 1, 1)) * 100,
+                y: 100 - avg * 100,
+                date: chartViewMode === "daily" ? dates[0] : key,
+                value: Math.round(avg * 100),
+            });
+        });
+        return points;
+    }, [uniqueDates, chartViewMode, filteredRecords]);
+
+    const chartPoints = groupedForChart;
+
+    const groupedForTasks = useMemo(() => {
+        const groups = groupDatesByMode(uniqueDates, tasksViewMode);
+        return Array.from(groups.entries()).map(([key, dates]) => {
+            const recs = dates.flatMap((dt) => filteredRecords.filter((r) => r.date === dt));
+            const agg = aggregateRecords(recs);
+            return { key, label: tasksViewMode === "daily" ? dates[0] : key, agg };
+        });
+    }, [uniqueDates, tasksViewMode, filteredRecords]);
+
+    const groupedForHours = useMemo(() => {
+        const groups = groupDatesByMode(uniqueDates, hoursViewMode);
+        return Array.from(groups.entries()).map(([key, dates]) => {
+            const recs = dates.flatMap((dt) => filteredRecords.filter((r) => r.date === dt));
+            const agg = aggregateRecords(recs);
+            return { key, label: hoursViewMode === "daily" ? dates[0] : key, agg };
+        });
+    }, [uniqueDates, hoursViewMode, filteredRecords]);
+
+    const groupedForCards = useMemo(() => {
+        const groups = groupDatesByMode(uniqueDates, cardsViewMode);
+        return Array.from(groups.entries()).map(([key, dates]) => {
+            const recs = dates.flatMap((dt) => filteredRecords.filter((r) => r.date === dt));
+            const agg = aggregateRecords(recs);
+            return { key, label: cardsViewMode === "daily" ? dates[0] : key, agg };
+        });
+    }, [uniqueDates, cardsViewMode, filteredRecords]);
+
+    if (!isReady) return <MemberProfileSkeleton />;
+
+    if (!member) {
+        return (
+            <div className="flex items-center justify-center py-20 text-[var(--color-text-muted)]">
+                لم يتم العثور على الموظف
+            </div>
+        );
+    }
+
+    return (
+        <div className="space-y-6 animate-fade-in">
+            <Header
+                title={`ملف الموظف - ${member.name}`}
+                description={`${member.role} | ${member.subDepartmentName}`}
+                actions={
+                    <div className="flex items-center gap-2">
+                        <Button
+                            onClick={() =>
+                                navigate(getMemberInsightsPath(member.id), { state: { from: "profile" } })
+                            }
+                            className="gap-2"
+                        >
+                            <Eye className="h-4 w-4" />
+                            تحليلات الأداء
+                        </Button>
+                        <Button
+                            variant="outline"
+                            onClick={() => navigate(-1)}
+                            className="gap-2"
+                        >
+                            <ArrowRight className="h-4 w-4" />
+                            العودة
+                        </Button>
+                    </div>
+                }
+            />
+
+            {/* Date Range Filter */}
+            <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3 space-y-3">
+                {/* Presets row */}
+                <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-thin pb-1">
+                    <CalendarDays className="h-4 w-4 text-[var(--color-text-muted)] shrink-0" />
+                    <span className="text-sm font-medium text-[var(--color-text-secondary)] shrink-0">الفترة</span>
+                    <div className="flex items-center gap-1.5">
+                        {DATE_PRESETS.map((p) => (
+                            <Button
+                                key={p.value}
+                                variant={preset === p.value ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => handlePreset(p.value)}
+                                className="text-[11px] shrink-0 h-7 px-2"
+                            >
+                                {p.label}
+                            </Button>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Date inputs row */}
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                    <DatePicker
+                        label="من"
+                        value={startDate}
+                        min={minCustom}
+                        max={endDate}
+                        onChange={handleStartDate}
+                        disabled={!isCustom}
+                    />
+                    <span className="text-[var(--color-text-muted)] hidden sm:block pb-2">—</span>
+                    <DatePicker
+                        label="إلى"
+                        value={endDate}
+                        min={startDate}
+                        max={lastDate}
+                        onChange={handleEndDate}
+                        disabled={!isCustom}
+                    />
+                    {isCustom && (
+                        <span className="text-[10px] text-[var(--color-text-muted)] shrink-0 pb-2">
+                            (أقصى حد: ٣ سنوات)
+                        </span>
+                    )}
+                </div>
+            </div>
+
+            {/* Summary Stats */}
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
+                <StatCard
+                    label="إجمالي المهام"
+                    value={totalTasks}
+                    icon={ClipboardList}
+                    color="#6366F1"
+                />
+                <StatCard
+                    label="المهام المنفذة"
+                    value={totalExecuted}
+                    icon={CheckCircle2}
+                    color="#10B981"
+                />
+                <StatCard
+                    label="المهام الغير منفذة"
+                    value={totalUnexecuted}
+                    icon={XCircle}
+                    color="#EF4444"
+                />
+                <StatCard
+                    label="ساعات مفقودة"
+                    value={totalLostHours}
+                    icon={Clock}
+                    color="#F59E0B"
+                />
+                <StatCard
+                    label="متوسط الأداء"
+                    value={avgPerformance}
+                    suffix="%"
+                    icon={TrendingUp}
+                    className="col-span-2 sm:col-span-1"
+                    color="#2563EB"
+                />
+            </div>
+
+            {/* Performance Trend Chart */}
+            {chartPoints.length > 1 && (
+                <div>
+                    <div className="flex items-center justify-between mb-2">
+                        <span />
+                        <ViewModeSelector mode={chartViewMode} onChange={(m) => setChartViewMode(m)} availableModes={availableViewModes} />
+                    </div>
+                    <TrendChart
+                        points={chartPoints}
+                        formatDate={(d) => chartViewMode === "daily" ? formatDate(d) : formatGroupKey(d, chartViewMode)}
+                    />
+                </div>
+            )}
+
+            {/* Tasks Bar Chart — Grouped & Paginated */}
+            <Card>
+                <CardHeader>
+                    <div className="flex items-center justify-between">
+                        <CardTitle className="text-base">تفصيل المهام</CardTitle>
+                        <div className="flex items-center gap-3">
+                            <span className="text-xs text-[var(--color-text-muted)]">{groupedForTasks.length} فترة</span>
+                            <ViewModeSelector mode={tasksViewMode} onChange={(m) => { setTasksViewMode(m); setTasksPage(1); }} availableModes={availableViewModes} />
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    <div className="space-y-3">
+                        {groupedForTasks
+                            .slice((tasksPage - 1) * SECTION_PAGE_SIZE, tasksPage * SECTION_PAGE_SIZE)
+                            .map(({ key, label, agg }) => {
+                            const total = agg.totalTasks || 1;
+                            const execPct = (agg.executedTasks / total) * 100;
+                            const unexecPct = (agg.unexecutedTasks / total) * 100;
+                            return (
+                                <div key={key} className="flex items-center gap-3">
+                                    <span className="w-28 text-xs text-[var(--color-text-muted)] shrink-0 truncate" title={tasksViewMode === "daily" ? formatDate(label) : formatGroupKey(label, tasksViewMode)}>
+                                        {tasksViewMode === "daily" ? formatDate(label) : formatGroupKey(label, tasksViewMode)}
+                                    </span>
+                                    <div className="flex-1 flex h-5 rounded-full overflow-hidden bg-[var(--color-surface)]">
+                                        <div className="h-full bg-[var(--color-success)] transition-all duration-1000" style={{ width: `${execPct}%` }} title={`منفذة: ${agg.executedTasks}`} />
+                                        <div className="h-full bg-[var(--color-error)] transition-all duration-1000" style={{ width: `${unexecPct}%` }} title={`غير منفذة: ${agg.unexecutedTasks}`} />
+                                    </div>
+                                    <Badge variant={agg.registrationStatus === "تم" ? "success" : agg.registrationStatus === "أجازة" ? "warning" : "secondary"} className="text-[10px] w-14 justify-center shrink-0">
+                                        {agg.registrationStatus || "-"}
+                                    </Badge>
+                                </div>
+                            );
+                        })}
+                    </div>
+                    <div className="mt-4 flex items-center justify-between">
+                        <div className="flex items-center gap-4 text-xs text-[var(--color-text-muted)]">
+                            <div className="flex items-center gap-1"><div className="h-2.5 w-2.5 rounded-full bg-[var(--color-success)]" /><span>منفذة</span></div>
+                            <div className="flex items-center gap-1"><div className="h-2.5 w-2.5 rounded-full bg-[var(--color-error)]" /><span>غير منفذة</span></div>
+                        </div>
+                        {groupedForTasks.length > SECTION_PAGE_SIZE && (
+                            <div className="flex items-center gap-2">
+                                <Button variant="outline" size="sm" disabled={tasksPage <= 1} onClick={() => setTasksPage((p) => p - 1)}>السابق</Button>
+                                <span className="text-xs text-[var(--color-text-muted)] tabular-nums">{tasksPage} / {Math.ceil(groupedForTasks.length / SECTION_PAGE_SIZE)}</span>
+                                <Button variant="outline" size="sm" disabled={tasksPage >= Math.ceil(groupedForTasks.length / SECTION_PAGE_SIZE)} onClick={() => setTasksPage((p) => p + 1)}>التالي</Button>
+                            </div>
+                        )}
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* Hours Comparison — Grouped & Paginated */}
+            <Card>
+                <CardHeader>
+                    <div className="flex items-center justify-between">
+                        <CardTitle className="text-base">مقارنة ساعات العمل</CardTitle>
+                        <div className="flex items-center gap-3">
+                            <span className="text-xs text-[var(--color-text-muted)]">{groupedForHours.length} فترة</span>
+                            <ViewModeSelector mode={hoursViewMode} onChange={(m) => { setHoursViewMode(m); setHoursPage(1); }} availableModes={availableViewModes} />
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    <div className="space-y-3">
+                        {groupedForHours
+                            .slice((hoursPage - 1) * SECTION_PAGE_SIZE, hoursPage * SECTION_PAGE_SIZE)
+                            .map(({ key, label, agg }) => {
+                            if (agg.dailyWorkHours === 0) return null;
+                            return (
+                                <div key={key} className="space-y-1">
+                                    <div className="flex items-center justify-between text-xs">
+                                        <span className="text-[var(--color-text-muted)]">
+                                            {hoursViewMode === "daily" ? formatDate(label) : formatGroupKey(label, hoursViewMode)}
+                                        </span>
+                                        <span className="text-[var(--color-text-secondary)] tabular-nums">
+                                            {agg.actualHours}/{agg.dailyWorkHours} ساعة
+                                        </span>
+                                    </div>
+                                    <div className="flex h-3 rounded-full overflow-hidden bg-[var(--color-surface)]">
+                                        <div className="h-full bg-[var(--color-info)] rounded-full transition-all duration-1000" style={{ width: `${(agg.actualHours / agg.dailyWorkHours) * 100}%` }} />
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                    {groupedForHours.length > SECTION_PAGE_SIZE && (
+                        <div className="flex items-center justify-center gap-2 mt-4">
+                            <Button variant="outline" size="sm" disabled={hoursPage <= 1} onClick={() => setHoursPage((p) => p - 1)}>السابق</Button>
+                            <span className="text-xs text-[var(--color-text-muted)] tabular-nums">{hoursPage} / {Math.ceil(groupedForHours.length / SECTION_PAGE_SIZE)}</span>
+                            <Button variant="outline" size="sm" disabled={hoursPage >= Math.ceil(groupedForHours.length / SECTION_PAGE_SIZE)} onClick={() => setHoursPage((p) => p + 1)}>التالي</Button>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+
+            {/* Detailed Cards — Grouped & Paginated */}
+            <div>
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-semibold text-[var(--color-text-dark)] flex items-center gap-2">
+                        <CalendarDays className="h-5 w-5" />
+                        البيانات التفصيلية
+                    </h2>
+                    <div className="flex items-center gap-3">
+                        <span className="text-xs text-[var(--color-text-muted)]">{groupedForCards.length} فترة</span>
+                        <ViewModeSelector mode={cardsViewMode} onChange={(m) => { setCardsViewMode(m); setCardsPage(1); }} availableModes={availableViewModes} />
+                    </div>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                    {groupedForCards
+                        .slice((cardsPage - 1) * CARDS_PER_PAGE, cardsPage * CARDS_PER_PAGE)
+                        .map(({ key, label, agg }) => (
+                            <Card key={key} className="hover-lift">
+                                <CardHeader className="pb-3">
+                                    <div className="flex items-center justify-between">
+                                        <CardTitle className="text-sm">
+                                            {cardsViewMode === "daily" ? formatDate(label, "long") : formatGroupKey(label, cardsViewMode)}
+                                        </CardTitle>
+                                        <div className="flex items-center gap-1.5">
+                                            {agg.count > 1 && <span className="text-[10px] text-[var(--color-text-muted)]">{agg.count} أيام</span>}
+                                            <Badge variant={agg.registrationStatus === "تم" ? "success" : agg.registrationStatus === "أجازة" ? "warning" : "secondary"}>
+                                                {agg.registrationStatus || "غير محدد"}
+                                            </Badge>
+                                        </div>
+                                    </div>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="grid grid-cols-2 gap-2 text-sm">
+                                        <div><span className="text-[var(--color-text-muted)]">المهام:</span> <span className="font-medium">{agg.totalTasks}</span></div>
+                                        <div><span className="text-[var(--color-text-muted)]">منفذة:</span> <span className="font-medium text-[var(--color-success)]">{agg.executedTasks}</span></div>
+                                        <div><span className="text-[var(--color-text-muted)]">مخطط:</span> <span className="font-medium">{agg.planned}</span></div>
+                                        <div><span className="text-[var(--color-text-muted)]">غير مخطط:</span> <span className="font-medium">{agg.unplanned}</span></div>
+                                        <div><span className="text-[var(--color-text-muted)]">ساعات فعلية:</span> <span className="font-medium">{agg.actualHours}</span></div>
+                                        <div><span className="text-[var(--color-text-muted)]">ساعات مفقودة:</span> <span className="font-medium text-[var(--color-error)]">{agg.lostHours}</span></div>
+                                    </div>
+                                    {agg.workPercentage > 0 && (
+                                        <ProgressBar value={Math.round(agg.workPercentage * 100)} label="نسبة الأعمال" size="sm" className="mt-3" />
+                                    )}
+                                </CardContent>
+                            </Card>
+                        ))}
+                </div>
+
+                {groupedForCards.length > CARDS_PER_PAGE && (
+                    <div className="flex items-center justify-center gap-2 mt-4">
+                        <Button variant="outline" size="sm" disabled={cardsPage <= 1} onClick={() => setCardsPage((p) => p - 1)}>السابق</Button>
+                        <span className="text-sm text-[var(--color-text-muted)] tabular-nums px-2">{cardsPage} / {Math.ceil(groupedForCards.length / CARDS_PER_PAGE)}</span>
+                        <Button variant="outline" size="sm" disabled={cardsPage >= Math.ceil(groupedForCards.length / CARDS_PER_PAGE)} onClick={() => setCardsPage((p) => p + 1)}>التالي</Button>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
