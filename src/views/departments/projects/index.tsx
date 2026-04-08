@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
     ArrowLeft,
@@ -7,6 +7,7 @@ import {
     LockOpen,
     FolderKanban,
     Filter,
+    Search,
     X,
     ChevronLeft,
     ChevronRight,
@@ -14,7 +15,7 @@ import {
     ChevronsRight,
 } from "lucide-react";
 import { Header, ScoreGauge, ProgressBar, EmptyState } from "@/components/shared";
-import { Badge, Button, Card, CardHeader, CardTitle, CardContent } from "@/atoms";
+import { Badge, Button, Card, CardHeader, CardTitle, CardContent, Input } from "@/atoms";
 import {
     Select,
     SelectTrigger,
@@ -109,6 +110,9 @@ export function ProjectsView() {
     usePageTitle("إدارة المشروعات");
 
     // Read all state from URL
+    const searchQuery = searchParams.get("q") || "";
+    const [localSearch, setLocalSearch] = useState(searchQuery);
+    const searchDebounce = useRef<ReturnType<typeof setTimeout>>(undefined);
     const perfFilter = (searchParams.get("perf") || "all") as PerformanceFilter;
     const costFilter = (searchParams.get("cost") || "all") as LevelFilter;
     const timeFilter = (searchParams.get("time") || "all") as LevelFilter;
@@ -116,6 +120,21 @@ export function ProjectsView() {
     const sortRaw = searchParams.get("sort") || "avg:desc";
     const currentPage = Number(searchParams.get("page")) || 1;
     const pageSize = Number(searchParams.get("limit")) || 12;
+
+    // Brief loading state on filter/sort/page changes
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const refreshTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+    const prevKey = useRef("");
+    const changeKey = searchParams.toString();
+    useEffect(() => {
+        if (prevKey.current && prevKey.current !== changeKey) {
+            queueMicrotask(() => setIsRefreshing(true));
+            clearTimeout(refreshTimer.current);
+            refreshTimer.current = setTimeout(() => setIsRefreshing(false), 300);
+        }
+        prevKey.current = changeKey;
+        return () => clearTimeout(refreshTimer.current);
+    }, [changeKey]);
 
     // Parse sort
     const [sortKey, sortDir] = useMemo(() => {
@@ -149,6 +168,14 @@ export function ProjectsView() {
         [setSearchParams],
     );
 
+    const handleSearchChange = useCallback((value: string) => {
+        setLocalSearch(value);
+        clearTimeout(searchDebounce.current);
+        searchDebounce.current = setTimeout(() => {
+            setParam("q", value);
+        }, 300);
+    }, [setParam]);
+
     const setCurrentPage = (v: number) => setParam("page", String(v), false);
     const setPageSize = (v: number) => {
         setSearchParams(
@@ -164,13 +191,14 @@ export function ProjectsView() {
     // Filter projects
     const filteredProjects = useMemo(() => {
         return seedProjects.filter((p) => {
+            if (searchQuery.trim() && !p.name.includes(searchQuery.trim())) return false;
             if (!matchesPerformance(p.avgPerformance, perfFilter)) return false;
             if (!matchesLevel(p.cost, costFilter)) return false;
             if (!matchesLevel(p.time, timeFilter)) return false;
             if (!matchesLevel(p.quality, qualityFilter)) return false;
             return true;
         });
-    }, [perfFilter, costFilter, timeFilter, qualityFilter]);
+    }, [searchQuery, perfFilter, costFilter, timeFilter, qualityFilter]);
 
     // Sort projects
     const sortedProjects = useMemo(() => {
@@ -191,6 +219,7 @@ export function ProjectsView() {
     const endIndex = Math.min(safeCurrentPage * pageSize, sortedProjects.length);
 
     const hasActiveFilters =
+        searchQuery ||
         perfFilter !== "all" ||
         costFilter !== "all" ||
         timeFilter !== "all" ||
@@ -268,12 +297,23 @@ export function ProjectsView() {
                     <span>تصفية</span>
                 </div>
 
+                {/* Search */}
+                <div className="relative flex-1 min-w-[180px]">
+                    <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--color-text-muted)]" />
+                    <Input
+                        placeholder="بحث بالاسم..."
+                        value={localSearch}
+                        onChange={(e) => handleSearchChange(e.target.value)}
+                        className="pr-9 h-9 text-sm"
+                    />
+                </div>
+
                 {/* Performance filter */}
                 <Select
                     value={perfFilter}
                     onValueChange={(v) => setParam("perf", v)}
                 >
-                    <SelectTrigger className="w-[200px] h-9 text-sm">
+                    <SelectTrigger className="w-full sm:w-[200px] h-9 text-sm">
                         <SelectValue placeholder="مستوى الأداء" />
                     </SelectTrigger>
                     <SelectContent>
@@ -295,7 +335,7 @@ export function ProjectsView() {
                     value={costFilter}
                     onValueChange={(v) => setParam("cost", v)}
                 >
-                    <SelectTrigger className="w-[200px] h-9 text-sm">
+                    <SelectTrigger className="w-full sm:w-[200px] h-9 text-sm">
                         <SelectValue placeholder="مستوى التكلفة" />
                     </SelectTrigger>
                     <SelectContent>
@@ -317,7 +357,7 @@ export function ProjectsView() {
                     value={timeFilter}
                     onValueChange={(v) => setParam("time", v)}
                 >
-                    <SelectTrigger className="w-[200px] h-9 text-sm">
+                    <SelectTrigger className="w-full sm:w-[200px] h-9 text-sm">
                         <SelectValue placeholder="مستوى الوقت" />
                     </SelectTrigger>
                     <SelectContent>
@@ -339,7 +379,7 @@ export function ProjectsView() {
                     value={qualityFilter}
                     onValueChange={(v) => setParam("quality", v)}
                 >
-                    <SelectTrigger className="w-[200px] h-9 text-sm">
+                    <SelectTrigger className="w-full sm:w-[200px] h-9 text-sm">
                         <SelectValue placeholder="مستوى الجودة" />
                     </SelectTrigger>
                     <SelectContent>
@@ -376,6 +416,14 @@ export function ProjectsView() {
                     <span className="text-xs text-[var(--color-text-muted)]">
                         {sortedProjects.length} مشروع
                     </span>
+                    {searchQuery && (
+                        <Badge variant="secondary" className="gap-1">
+                            بحث: {searchQuery}
+                            <button onClick={() => { setParam("q", ""); setLocalSearch(""); }} className="cursor-pointer">
+                                <X className="h-3 w-3" />
+                            </button>
+                        </Badge>
+                    )}
                     {perfFilter !== "all" && (
                         <Badge variant="secondary" className="gap-1">
                             الأداء: {PERF_FILTER_LABELS[perfFilter]}
@@ -419,7 +467,7 @@ export function ProjectsView() {
                 </div>
 
                 <Select value={sortRaw} onValueChange={(v) => setParam("sort", v, false)}>
-                    <SelectTrigger className="w-[220px] h-9 text-sm">
+                    <SelectTrigger className="w-full sm:w-[220px] h-9 text-sm">
                         <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -446,24 +494,34 @@ export function ProjectsView() {
 
             {/* Results count */}
             {!hasActiveFilters && (
-                <span className="text-sm text-[var(--color-text-muted)]">
+                <span className="text-sm text-[var(--color-text-muted)] mb-2 block">
                     {sortedProjects.length} مشروع
                 </span>
             )}
 
-            {/* Project Cards Grid */}
+            {/* Project Cards Grid — skeleton on refresh */}
+            {isRefreshing ? (
+                <div className="space-y-4 animate-pulse">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        {Array.from({ length: 4 }).map((_, i) => (
+                            <div key={i} className="h-48 rounded-xl bg-[var(--color-surface)]" />
+                        ))}
+                    </div>
+                </div>
+            ) : (
+            <>
             {paginatedProjects.length === 0 ? (
                 <EmptyState
-                    icon={FolderKanban}
-                    title="لا توجد مشاريع مطابقة"
-                    description="جرب تغيير معايير التصفية لعرض المشاريع المتاحة."
+                    icon={searchQuery ? Search : FolderKanban}
+                    title={searchQuery ? "لا توجد نتائج بحث" : "لا توجد مشاريع مطابقة"}
+                    description={searchQuery ? `لا توجد مشاريع تطابق "${searchQuery}". جرب البحث بكلمة أخرى.` : "جرب تغيير معايير التصفية لعرض المشاريع المتاحة."}
                 />
             ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     {paginatedProjects.map((project) => (
                         <Card
                             key={project.id}
-                            className="relative cursor-pointer transition-transform hover:scale-[1.01]"
+                            className="relative cursor-pointer transition-all duration-200 hover:scale-[1.02] hover:border-white/30 hover:shadow-md"
                             onClick={() => {
                                 toast.error(
                                     "هذا المشروع غير متاح حاليًا. يرجى التواصل مع الإدارة للحصول على صلاحية الوصول.",
@@ -530,7 +588,7 @@ export function ProjectsView() {
                                 value={String(pageSize)}
                                 onValueChange={(v) => setPageSize(Number(v))}
                             >
-                                <SelectTrigger className="w-[68px] h-8 text-xs">
+                                <SelectTrigger className="w-[68px] h-8 text-xs cursor-pointer">
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -597,6 +655,8 @@ export function ProjectsView() {
                         </Button>
                     </div>
                 </div>
+            )}
+            </>
             )}
         </div>
     );

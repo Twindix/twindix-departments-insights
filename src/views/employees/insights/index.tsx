@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { ArrowLeft, User, Target, Award, BarChart3, FileText, BookOpen, Star } from "lucide-react";
 import { Header, ScoreGauge, ProgressBar, EmployeeInsightsSkeleton } from "@/components/shared";
@@ -24,6 +24,20 @@ export function EmployeeInsightsView() {
         },
         [setSearchParams]
     );
+
+    // Brief loading skeleton on tab change
+    const [isTabLoading, setIsTabLoading] = useState(false);
+    const tabTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+    const prevTab = useRef(tab);
+    useEffect(() => {
+        if (prevTab.current !== tab) {
+            queueMicrotask(() => setIsTabLoading(true));
+            clearTimeout(tabTimer.current);
+            tabTimer.current = setTimeout(() => setIsTabLoading(false), 300);
+        }
+        prevTab.current = tab;
+        return () => clearTimeout(tabTimer.current);
+    }, [tab]);
 
     // Check if we came from the employee's profile page
     const cameFromProfile = (location.state as { from?: string } | null)?.from === "profile";
@@ -142,6 +156,15 @@ export function EmployeeInsightsView() {
                     </TabsTrigger>
                 </TabsList>
 
+                {isTabLoading ? (
+                    <div className="space-y-4 animate-pulse mt-4">
+                        <div className="grid gap-6 md:grid-cols-3">
+                            <div className="h-48 rounded-xl bg-[var(--color-surface)]" />
+                            <div className="h-48 rounded-xl bg-[var(--color-surface)] md:col-span-2" />
+                        </div>
+                    </div>
+                ) : (
+                <>
                 {/* Introduction Tab */}
                 <TabsContent value="intro">
                     <div className="grid gap-6 md:grid-cols-3">
@@ -482,6 +505,8 @@ export function EmployeeInsightsView() {
                         ))}
                     </div>
                 </TabsContent>
+                </>
+                )}
             </Tabs>
         </div>
     );

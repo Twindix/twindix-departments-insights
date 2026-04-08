@@ -1,6 +1,6 @@
 // Static seed data — accessed directly by views at runtime
 
-export { seedDepartments, seedSubDepartments } from "./departments";
+export { seedDepartments, seedSubDepartments, tableAllAvg } from "./departments";
 export { seedEmployees } from "./employees";
 export { seedDepartmentRecords } from "./department-records";
 export { seedEmployeeInsights, SHARED_CORE_COMPETENCIES } from "./employee-insights";

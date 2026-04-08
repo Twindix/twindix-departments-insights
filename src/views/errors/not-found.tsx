@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Search, ArrowRight, Home } from "lucide-react";
+import { Search, ArrowLeft, Home } from "lucide-react";
 import { Button } from "@/atoms";
 import { APP_NAME_AR, APP_VERSION } from "@/data";
 
@@ -31,7 +31,7 @@ export function NotFoundView() {
                             variant="outline"
                             className="gap-2"
                         >
-                            <ArrowRight className="h-4 w-4" />
+                            <ArrowLeft className="h-4 w-4" />
                             العودة
                         </Button>
                         <Button

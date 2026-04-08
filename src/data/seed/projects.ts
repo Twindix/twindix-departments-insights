@@ -68,7 +68,7 @@ const PROJECT_DESCRIPTIONS = [
 
 function generateProjects(): ProjectInterface[] {
     const rand = seededRandom(42);
-    const TARGET_AVG = 68;
+    const TARGET_AVG = 82;
     const TOTAL_COUNT = 100;
     const TARGET_SUM = TARGET_AVG * TOTAL_COUNT; // 6800
 

@@ -19,15 +19,10 @@ export function DashboardView() {
         (sum, d) => sum + d.employeeCount,
         0
     );
-    const avgPerformance =
-        departments.length > 0
-            ? Math.round(
-                  departments.reduce(
-                      (sum, d) => sum + d.overallPerformance,
-                      0
-                  ) / departments.length
-              )
-            : 0;
+    // Average of all 9 department card percentages
+    const avgPerformance = departments.length > 0
+        ? Math.round(departments.reduce((sum, d) => sum + d.overallPerformance, 0) / departments.length)
+        : 0;
 
     const departmentRoutes: Record<string, string> = {
         "dept-hr": routesData.departmentHr,

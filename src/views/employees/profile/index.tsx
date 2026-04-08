@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useCallback } from "react";
+import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import {
     ArrowLeft,
@@ -56,12 +56,12 @@ function TrendChart({
     // Map points to percentage positions within the chart area
     const mapped = points.map((p) => ({
         ...p,
-        pctX: chartLeft + (p.x / 100) * (100 - chartLeft - 2),
+        pctX: chartLeft + (p.x / 100) * (100 - chartLeft),
         pctY: (p.y / 100) * (100 - chartBottom),
     }));
 
     // SVG polyline in a viewBox that matches the chart area
-    const svgW = 100 - chartLeft - 2;
+    const svgW = 100 - chartLeft;
     const svgH = 100 - chartBottom;
 
     const svgPoints = points.map((p) => ({
@@ -83,7 +83,7 @@ function TrendChart({
             // Find nearest point by comparing mapped pctX (which is from right)
             // But our overlay only covers the chart area, so we need to map
             // xFromRight (0-100 of overlay) to the point's x (0-100 range)
-            // The overlay width corresponds to (100 - chartLeft - 2)% of the container
+            // The overlay width corresponds to (100 - chartLeft)% of the container
             // Points' x values go 0-100 within that same range
             const xPct = (xFromRight / 100) * 100; // percentage within the overlay = point x
 
@@ -189,7 +189,7 @@ function TrendChart({
                         style={{
                             top: 0,
                             left: 0,
-                            width: `${100 - chartLeft - 2}%`,
+                            width: `${100 - chartLeft}%`,
                             height: `${100 - chartBottom}%`,
                         }}
                         preserveAspectRatio="none"
@@ -233,7 +233,7 @@ function TrendChart({
                         style={{
                             top: 0,
                             left: 0,
-                            width: `${100 - chartLeft - 2}%`,
+                            width: `${100 - chartLeft}%`,
                             height: `${100 - chartBottom}%`,
                             zIndex: 4,
                         }}
@@ -569,6 +569,21 @@ export function EmployeeProfileView() {
     const isCustom = preset === "custom";
     const minCustom = getMinCustomDate(lastDate);
 
+    // Brief loading state on duration changes
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const refreshTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+    const prevDateKey = useRef("");
+    const dateKey = `${startDate}-${endDate}`;
+    useEffect(() => {
+        if (prevDateKey.current && prevDateKey.current !== dateKey) {
+            queueMicrotask(() => setIsRefreshing(true));
+            clearTimeout(refreshTimer.current);
+            refreshTimer.current = setTimeout(() => setIsRefreshing(false), 400);
+        }
+        prevDateKey.current = dateKey;
+        return () => clearTimeout(refreshTimer.current);
+    }, [dateKey]);
+
     // Helper to read/write URL params for section state
     const getParam = (key: string, fallback: string) => searchParams.get(key) || fallback;
     const setParams = useCallback((updates: Record<string, string>) => {
@@ -827,6 +842,19 @@ export function EmployeeProfileView() {
                 </div>
             </div>
 
+            {/* Data section — shows skeleton during duration changes */}
+            {isRefreshing ? (
+                <div className="space-y-4 animate-pulse">
+                    <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                            <div key={i} className="h-24 rounded-xl bg-[var(--color-surface)]" />
+                        ))}
+                    </div>
+                    <div className="h-72 rounded-xl bg-[var(--color-surface)]" />
+                    <div className="h-48 rounded-xl bg-[var(--color-surface)]" />
+                </div>
+            ) : (
+            <>
             {/* Summary Stats */}
             <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
                 <StatCard
@@ -1025,6 +1053,9 @@ export function EmployeeProfileView() {
                     </div>
                 )}
             </div>
+
+            </>
+            )}
 
             {/* ── Employee CV / Resume Section ── */}
             {cv && (

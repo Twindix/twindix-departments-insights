@@ -27,7 +27,7 @@ export function DepartmentCircle({
             className={cn(
                 "dept-circle group relative flex flex-col items-center gap-3 rounded-2xl border bg-[var(--color-bg)] p-6 cursor-pointer transition-all duration-200",
                 isAccessible && "border-[var(--color-success)] ring-2 ring-[var(--color-success)]/30 hover:ring-[var(--color-success)]/50 hover:scale-[1.03]",
-                !isAccessible && "border-[var(--color-border)]",
+                !isAccessible && "border-[var(--color-border)] hover:border-white/30 hover:scale-[1.02]",
                 !isAccessible && "opacity-85",
                 className
             )}

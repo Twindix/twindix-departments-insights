@@ -79,7 +79,7 @@ export function FinanceView() {
                     return (
                         <Card
                             key={indicator.id}
-                            className="relative p-6 cursor-pointer transition-all duration-200 hover:shadow-md hover:border-[var(--color-border-hover)]"
+                            className="relative p-6 cursor-pointer transition-all duration-200 hover:shadow-md hover:border-white/30 hover:scale-[1.02]"
                             onClick={() => handleIndicatorClick(indicator)}
                         >
                             {/* Lock icon in corner */}

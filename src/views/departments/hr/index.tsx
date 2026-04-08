@@ -1,7 +1,7 @@
-import { useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Eye, Filter, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search, X, Loader2 } from "lucide-react";
-import { Header, ProgressBar, DataTable, type SortState, type SortDirection } from "@/components/shared";
+import { ArrowLeft, Eye, Filter, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search, X, Loader2, CalendarDays, Users } from "lucide-react";
+import { Header, ProgressBar, DataTable, DatePicker, EmptyState, type SortState, type SortDirection } from "@/components/shared";
 import { useDeferredLoad, usePageTitle } from "@/hooks";
 import { Button, Input, Badge } from "@/atoms";
 import { Tabs, TabsList, TabsTrigger, TabsContent, Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/ui";
@@ -17,24 +17,31 @@ const PAGE_SIZE_OPTIONS = [5, 10, 20, 50];
 
 type PerformanceFilter = "all" | "excellent" | "good" | "average" | "weak";
 
-// Calculate employee performance for the last 7 days (last week)
-function calculateEmployeePerformance(
-    employeeId: string,
-    records: DepartmentDailyRecordInterface[]
-): number {
-    const now = new Date();
-    const weekAgo = new Date(now);
-    weekAgo.setDate(weekAgo.getDate() - 7);
-    const weekAgoMs = weekAgo.getTime();
+type DatePreset = "7d" | "15d" | "1m" | "3m" | "6m" | "1y" | "3y" | "custom";
 
-    const employeeRecords = records.filter(
-        (r) => r.employeeId === employeeId && r.executedWorkPercentage > 0 && new Date(r.date).getTime() >= weekAgoMs
-    );
-    if (employeeRecords.length === 0) return 0;
-    const avg =
-        employeeRecords.reduce((s, r) => s + r.executedWorkPercentage, 0) /
-        employeeRecords.length;
-    return Math.round(avg * 100);
+const DATE_PRESETS: { value: DatePreset; label: string }[] = [
+    { value: "7d", label: "آخر أسبوع" },
+    { value: "15d", label: "آخر ١٥ يوم" },
+    { value: "1m", label: "آخر شهر" },
+    { value: "3m", label: "آخر ٣ أشهر" },
+    { value: "6m", label: "آخر ٦ أشهر" },
+    { value: "1y", label: "آخر سنة" },
+    { value: "3y", label: "آخر ٣ سنوات" },
+    { value: "custom", label: "مخصص" },
+];
+
+function getPresetStartDate(preset: DatePreset): string {
+    const now = new Date();
+    switch (preset) {
+        case "7d": { const d = new Date(now); d.setDate(d.getDate() - 7); return d.toISOString().split("T")[0]; }
+        case "15d": { const d = new Date(now); d.setDate(d.getDate() - 15); return d.toISOString().split("T")[0]; }
+        case "1m": { const d = new Date(now); d.setMonth(d.getMonth() - 1); return d.toISOString().split("T")[0]; }
+        case "3m": { const d = new Date(now); d.setMonth(d.getMonth() - 3); return d.toISOString().split("T")[0]; }
+        case "6m": { const d = new Date(now); d.setMonth(d.getMonth() - 6); return d.toISOString().split("T")[0]; }
+        case "1y": { const d = new Date(now); d.setFullYear(d.getFullYear() - 1); return d.toISOString().split("T")[0]; }
+        case "3y": { const d = new Date(now); d.setFullYear(d.getFullYear() - 3); return d.toISOString().split("T")[0]; }
+        default: return now.toISOString().split("T")[0];
+    }
 }
 
 function getPerformanceCategory(perf: number): PerformanceFilter {
@@ -57,13 +64,50 @@ interface FilteredTableProps {
     records: DepartmentDailyRecordInterface[];
     navigate: ReturnType<typeof useNavigate>;
     deptLabel: string;
+    startMs: number;
+    endMs: number;
 }
 
-function FilteredTable({ employees, records, navigate, deptLabel }: FilteredTableProps) {
+function TableSkeleton() {
+    return (
+        <div className="space-y-4 animate-pulse">
+            <div className="h-6 w-full rounded-full bg-[var(--color-surface)]" />
+            <div className="h-12 w-full rounded-xl bg-[var(--color-surface)]" />
+            <div className="space-y-3">
+                {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} className="flex items-center gap-4">
+                        <div className="h-10 flex-1 rounded-lg bg-[var(--color-surface)]" style={{ animationDelay: `${i * 0.05}s` }} />
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+function FilteredTable({ employees, records, navigate, deptLabel, startMs, endMs }: FilteredTableProps) {
     const [searchParams, setSearchParams] = useSearchParams();
+
+    // Brief loading state on filter/sort/duration changes
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const refreshTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+    const prevKey = useRef("");
+
+    // Build a key from all inputs that should trigger a refresh
+    const changeKey = `${startMs}-${endMs}-${searchParams.toString()}`;
+    useEffect(() => {
+        if (prevKey.current && prevKey.current !== changeKey) {
+            queueMicrotask(() => setIsRefreshing(true));
+            clearTimeout(refreshTimer.current);
+            refreshTimer.current = setTimeout(() => setIsRefreshing(false), 350);
+        }
+        prevKey.current = changeKey;
+        return () => clearTimeout(refreshTimer.current);
+    }, [changeKey]);
 
     // Read all filter/page/sort state from URL
     const searchQuery = searchParams.get("q") || "";
+    const [localSearch, setLocalSearch] = useState(searchQuery);
+    const searchDebounce = useRef<ReturnType<typeof setTimeout>>(undefined);
     const roleFilter = searchParams.get("role") || "all";
     const perfFilter = (searchParams.get("perf") || "all") as PerformanceFilter;
     const tenureFilter = (searchParams.get("tenure") || "all") as TenureFilter;
@@ -94,6 +138,13 @@ function FilteredTable({ employees, records, navigate, deptLabel }: FilteredTabl
     }, [setSearchParams]);
 
     const setSearchQuery = (v: string) => setParam("q", v);
+    const handleSearchChange = useCallback((value: string) => {
+        setLocalSearch(value);
+        clearTimeout(searchDebounce.current);
+        searchDebounce.current = setTimeout(() => {
+            setParam("q", value);
+        }, 300);
+    }, [setParam]);
     const setRoleFilter = (v: string) => setParam("role", v);
     const setPerfFilter = (v: string) => setParam("perf", v);
     const setTenureFilter = (v: string) => setParam("tenure", v);
@@ -108,14 +159,30 @@ function FilteredTable({ employees, records, navigate, deptLabel }: FilteredTabl
         return Array.from(roles).sort();
     }, [employees]);
 
-    // Performance cache
+    // Performance cache — single-pass over all records, then O(1) per employee
     const performanceMap = useMemo(() => {
+        // Step 1: Build employeeId -> execution percentages from date-filtered records (single pass)
+        const empRecs = new Map<string, number[]>();
+        for (const r of records) {
+            if (r.executedWorkPercentage > 0) {
+                const t = new Date(r.date).getTime();
+                if (t >= startMs && t <= endMs) {
+                    const arr = empRecs.get(r.employeeId);
+                    if (arr) arr.push(r.executedWorkPercentage);
+                    else empRecs.set(r.employeeId, [r.executedWorkPercentage]);
+                }
+            }
+        }
+        // Step 2: Calculate avg per employee
         const map = new Map<string, number>();
-        employees.forEach((m) => {
-            map.set(m.id, calculateEmployeePerformance(m.id, records));
-        });
+        for (const m of employees) {
+            const recs = empRecs.get(m.id);
+            if (!recs || recs.length === 0) { map.set(m.id, 0); continue; }
+            const avg = recs.reduce((s, v) => s + v, 0) / recs.length;
+            map.set(m.id, Math.round(avg * 100));
+        }
         return map;
-    }, [employees, records]);
+    }, [employees, records, startMs, endMs]);
 
     // Filtered members
     const filteredEmployees = useMemo(() => {
@@ -278,7 +345,7 @@ function FilteredTable({ employees, records, navigate, deptLabel }: FilteredTabl
         },
         {
             key: "performance",
-            header: "أداء الأسبوع",
+            header: "الأداء",
             sortable: true,
             render: (m: EmployeeInterface) => {
                 const perf = performanceMap.get(m.id) ?? 0;
@@ -316,13 +383,6 @@ function FilteredTable({ employees, records, navigate, deptLabel }: FilteredTabl
 
     return (
         <div className="space-y-4">
-            {/* Performance bar */}
-            <ProgressBar
-                value={deptPerformance}
-                label={deptLabel}
-                size="lg"
-            />
-
             {/* Filters */}
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-wrap rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3 min-w-0">
                 <div className="flex items-center gap-1.5 text-sm font-medium text-[var(--color-text-secondary)]">
@@ -335,10 +395,8 @@ function FilteredTable({ employees, records, navigate, deptLabel }: FilteredTabl
                     <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--color-text-muted)]" />
                     <Input
                         placeholder="بحث بالاسم..."
-                        value={searchQuery}
-                        onChange={(e) => {
-                            setSearchQuery(e.target.value);
-                        }}
+                        value={localSearch}
+                        onChange={(e) => handleSearchChange(e.target.value)}
                         className="pr-9 h-9 text-sm"
                     />
                 </div>
@@ -350,7 +408,7 @@ function FilteredTable({ employees, records, navigate, deptLabel }: FilteredTabl
                         setRoleFilter(v);
                     }}
                 >
-                    <SelectTrigger className="w-[180px] h-9 text-sm">
+                    <SelectTrigger className="w-full sm:w-[180px] h-9 text-sm">
                         <SelectValue placeholder="الدور الوظيفي" />
                     </SelectTrigger>
                     <SelectContent>
@@ -370,7 +428,7 @@ function FilteredTable({ employees, records, navigate, deptLabel }: FilteredTabl
                         setPerfFilter(v as PerformanceFilter);
                     }}
                 >
-                    <SelectTrigger className="w-[180px] h-9 text-sm">
+                    <SelectTrigger className="w-full sm:w-[180px] h-9 text-sm">
                         <SelectValue placeholder="مستوى الأداء" />
                     </SelectTrigger>
                     <SelectContent>
@@ -391,7 +449,7 @@ function FilteredTable({ employees, records, navigate, deptLabel }: FilteredTabl
                         setTenureFilter(v as TenureFilter);
                     }}
                 >
-                    <SelectTrigger className="w-[180px] h-9 text-sm">
+                    <SelectTrigger className="w-full sm:w-[180px] h-9 text-sm">
                         <SelectValue placeholder="مدة الخدمة" />
                     </SelectTrigger>
                     <SelectContent>
@@ -460,15 +518,33 @@ function FilteredTable({ employees, records, navigate, deptLabel }: FilteredTabl
                 </div>
             )}
 
-            {/* Table */}
-            <DataTable
-                columns={columns}
-                data={paginatedEmployees}
-                onRowClick={(m) => navigate(getEmployeeProfilePath(m.id))}
-                emptyMessage="لا توجد نتائج مطابقة للتصفية"
-                sortState={sortState}
-                onSort={handleSort}
+            {/* Progress bar + Table (wrapped in skeleton on refresh) */}
+            {isRefreshing ? (
+                <TableSkeleton />
+            ) : (
+            <>
+            <ProgressBar
+                value={deptPerformance}
+                label={deptLabel}
+                size="lg"
             />
+
+            {sortedEmployees.length === 0 ? (
+                <EmptyState
+                    icon={searchQuery ? Search : Users}
+                    title={searchQuery ? "لا توجد نتائج بحث" : "لا توجد موظفين مطابقين"}
+                    description={searchQuery ? `لا توجد نتائج تطابق "${searchQuery}". جرب البحث بكلمة أخرى.` : "جرب تغيير معايير التصفية لعرض الموظفين."}
+                />
+            ) : (
+                <DataTable
+                    columns={columns}
+                    data={paginatedEmployees}
+                    onRowClick={(m) => navigate(getEmployeeProfilePath(m.id))}
+                    emptyMessage="لا توجد نتائج"
+                    sortState={sortState}
+                    onSort={handleSort}
+                />
+            )}
 
             {/* Pagination */}
             {filteredEmployees.length > 0 && (
@@ -486,7 +562,7 @@ function FilteredTable({ employees, records, navigate, deptLabel }: FilteredTabl
                                     setPageSize(Number(v));
                                 }}
                             >
-                                <SelectTrigger className="w-[68px] h-8 text-xs">
+                                <SelectTrigger className="w-[68px] h-8 text-xs cursor-pointer">
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -545,6 +621,8 @@ function FilteredTable({ employees, records, navigate, deptLabel }: FilteredTabl
                     </div>
                 </div>
             )}
+            </>
+            )}
         </div>
     );
 }
@@ -588,7 +666,6 @@ export function HrPerformanceView() {
         (value: string) => {
             setSearchParams((prev) => {
                 prev.set("tab", value);
-                // Reset filters that are department-specific
                 prev.delete("page");
                 prev.delete("limit");
                 prev.delete("role");
@@ -601,6 +678,88 @@ export function HrPerformanceView() {
         },
         [setSearchParams]
     );
+
+    // Tab change skeleton
+    const [isTabLoading, setIsTabLoading] = useState(false);
+    const tabTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+    const prevTab = useRef(tab);
+    useEffect(() => {
+        if (prevTab.current !== tab) {
+            queueMicrotask(() => setIsTabLoading(true));
+            clearTimeout(tabTimer.current);
+            tabTimer.current = setTimeout(() => setIsTabLoading(false), 350);
+        }
+        prevTab.current = tab;
+        return () => clearTimeout(tabTimer.current);
+    }, [tab]);
+
+    // Date range state — persisted in URL
+    const urlPreset = (searchParams.get("duration") || "7d") as DatePreset;
+    const urlFrom = searchParams.get("from");
+    const urlTo = searchParams.get("to");
+    const todayStr = new Date().toISOString().split("T")[0];
+
+    const [preset, setPresetRaw] = useState<DatePreset>(urlPreset);
+    const [startDate, setStartDateRaw] = useState<string>(
+        urlPreset === "custom" && urlFrom ? urlFrom : getPresetStartDate(urlPreset)
+    );
+    const [endDate, setEndDateRaw] = useState<string>(
+        urlPreset === "custom" && urlTo ? urlTo : todayStr
+    );
+
+    const startMs = new Date(startDate).getTime();
+    const endMs = new Date(endDate + "T23:59:59").getTime();
+
+    const handlePreset = useCallback((p: DatePreset) => {
+        setPresetRaw(p);
+        if (p !== "custom") {
+            const newStart = getPresetStartDate(p);
+            setStartDateRaw(newStart);
+            setEndDateRaw(todayStr);
+            setSearchParams((prev) => {
+                prev.set("duration", p);
+                prev.delete("from");
+                prev.delete("to");
+                prev.set("page", "1");
+                return prev;
+            }, { replace: true });
+        } else {
+            setSearchParams((prev) => {
+                prev.set("duration", "custom");
+                prev.set("from", startDate);
+                prev.set("to", endDate);
+                prev.set("page", "1");
+                return prev;
+            }, { replace: true });
+        }
+    }, [todayStr, startDate, endDate, setSearchParams]);
+
+    const handleStartDate = useCallback((val: string) => {
+        setStartDateRaw(val);
+        setPresetRaw("custom");
+        setSearchParams((prev) => {
+            prev.set("duration", "custom");
+            prev.set("from", val);
+            prev.set("to", endDate);
+            prev.set("page", "1");
+            return prev;
+        }, { replace: true });
+    }, [endDate, setSearchParams]);
+
+    const handleEndDate = useCallback((val: string) => {
+        setEndDateRaw(val);
+        setPresetRaw("custom");
+        setSearchParams((prev) => {
+            prev.set("duration", "custom");
+            prev.set("from", startDate);
+            prev.set("to", val);
+            prev.set("page", "1");
+            return prev;
+        }, { replace: true });
+    }, [startDate, setSearchParams]);
+
+    const isCustom = preset === "custom";
+    const minCustom = (() => { const d = new Date(); d.setFullYear(d.getFullYear() - 3); return d.toISOString().split("T")[0]; })();
 
     const employees = seedEmployees;
     const records = seedDepartmentRecords;
@@ -630,6 +789,33 @@ export function HrPerformanceView() {
                 }
             />
 
+            {/* Date Range Filter */}
+            <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3 space-y-3">
+                <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-thin pb-1">
+                    <CalendarDays className="h-4 w-4 text-[var(--color-text-muted)] shrink-0" />
+                    <span className="text-sm font-medium text-[var(--color-text-secondary)] shrink-0">الفترة</span>
+                    <div className="flex items-center gap-1.5">
+                        {DATE_PRESETS.map((p) => (
+                            <Button
+                                key={p.value}
+                                variant={preset === p.value ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => handlePreset(p.value)}
+                                className="text-[11px] shrink-0 h-7 px-2"
+                            >
+                                {p.label}
+                            </Button>
+                        ))}
+                    </div>
+                </div>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                    <DatePicker label="من" value={startDate} min={minCustom} max={endDate} onChange={handleStartDate} disabled={!isCustom} />
+                    <span className="text-[var(--color-text-muted)] hidden sm:block pb-2">—</span>
+                    <DatePicker label="إلى" value={endDate} min={startDate} max={todayStr} onChange={handleEndDate} disabled={!isCustom} />
+                    {isCustom && <span className="text-[10px] text-[var(--color-text-muted)] shrink-0 pb-2">(أقصى حد: ٣ سنوات)</span>}
+                </div>
+            </div>
+
             <Tabs value={tab} onValueChange={handleTabChange} dir="rtl">
                 <TabsList>
                     <TabsTrigger value="all">
@@ -642,12 +828,18 @@ export function HrPerformanceView() {
                     ))}
                 </TabsList>
 
+                {isTabLoading ? (
+                    <div className="mt-4"><TableSkeleton /></div>
+                ) : (
+                <>
                 <TabsContent value="all">
                     <FilteredTable
                         employees={getEmployees()}
                         records={records}
                         navigate={navigate}
                         deptLabel="الأداء العام لجميع الأقسام"
+                        startMs={startMs}
+                        endMs={endMs}
                     />
                 </TabsContent>
 
@@ -658,9 +850,13 @@ export function HrPerformanceView() {
                             records={records}
                             navigate={navigate}
                             deptLabel={`أداء قسم ${sd.name}`}
+                            startMs={startMs}
+                            endMs={endMs}
                         />
                     </TabsContent>
                 ))}
+                </>
+                )}
             </Tabs>
         </div>
     );

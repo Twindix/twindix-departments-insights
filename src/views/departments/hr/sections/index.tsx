@@ -19,7 +19,7 @@ import { Header } from "@/components/shared";
 import { Button } from "@/atoms";
 import { useDeferredLoad, usePageTitle } from "@/hooks";
 import { routesData } from "@/data";
-import { seedDepartmentRecords } from "@/data/seed";
+import { tableAllAvg } from "@/data/seed";
 import { toast } from "sonner";
 
 interface HrSection {
@@ -31,6 +31,9 @@ interface HrSection {
     isAccessible: boolean;
     route?: string;
 }
+
+// Static percentages for the 9 non-performance sections (performance is computed)
+export const HR_SECTION_PERCENTAGES = [82, 76, 69, 71, /* performance slot */ 65, 78, 80, 67, 72];
 
 const HR_SECTIONS: HrSection[] = [
     { id: "review", name: "المراجعة", icon: SearchCheck, color: "#3B82F6", percentage: 82, isAccessible: false },
@@ -152,37 +155,15 @@ function SectionCircle({ section, index, total, onNavigate }: {
     );
 }
 
-// Pre-compute last-week performance outside component (runs once at import time)
-const _computedPerformance = (() => {
-    const now = new Date();
-    const weekAgoMs = now.getTime() - 7 * 24 * 60 * 60 * 1000;
-
-    // Build a map of employeeId -> records for last week (single pass)
-    const empRecords = new Map<string, number[]>();
-    for (const r of seedDepartmentRecords) {
-        if (r.executedWorkPercentage > 0 && new Date(r.date).getTime() >= weekAgoMs) {
-            const arr = empRecords.get(r.employeeId);
-            if (arr) arr.push(r.executedWorkPercentage);
-            else empRecords.set(r.employeeId, [r.executedWorkPercentage]);
-        }
-    }
-
-    let totalPerf = 0;
-    let count = 0;
-    for (const [, recs] of empRecords) {
-        const avg = recs.reduce((s, v) => s + v, 0) / recs.length;
-        totalPerf += Math.round(avg * 100);
-        count++;
-    }
-    return count > 0 ? Math.round(totalPerf / count) : 0;
-})();
+// "تقييم وإدارة الأداء" section = table's total all-employees avg (same as dashboard "متوسط الأداء")
+const _perfSectionValue = tableAllAvg;
 
 export function HrDepartmentView() {
     const navigate = useNavigate();
     const isReady = useDeferredLoad(150);
     usePageTitle("إدارة الموارد البشرية");
 
-    const actualPerformance = _computedPerformance;
+    const actualPerformance = _perfSectionValue;
 
     // Inject the actual performance into the performance section
     const sections = useMemo(() =>

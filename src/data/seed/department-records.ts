@@ -78,11 +78,11 @@ const DEPT_PERFORMANCE_BIAS: Record<string, number> = {
     "dept-it": 5,      // ~72% — mixed
     "dept-finance": 7,  // ~81% — strong
     "dept-projects": 3, // ~62% — weaker
-    "dept-customer": 5, // ~70% — mixed
-    "dept-commercial": 2, // ~58% — struggling
+    "dept-customer": 1, // ~50% — struggling
+    "dept-commercial": 2, // ~58% — below average
     "dept-marketing": 8,  // ~85% — top performer
-    "dept-admin": 6,    // ~76% — above average
-    "dept-sales": 1,    // ~52% — lowest
+    "dept-admin": 1,    // ~50% — struggling
+    "dept-sales": 8,    // ~85% — top performer
 };
 
 function getEmployeeTier(employeeIndex: number, deptId: string): { minExec: number; maxExec: number; minHours: number; maxHours: number; absentRate: number } {
@@ -105,6 +105,32 @@ function getEmployeeTier(employeeIndex: number, deptId: string): { minExec: numb
         // Weak: 25-50% execution
         return { minExec: 0.25, maxExec: 0.52, minHours: 3, maxHours: 5.5, absentRate: 0.40 };
     }
+}
+
+// Time-based performance drift per department
+// Simulates real company trends: some depts improving, some declining over time
+// driftDirection: positive = improving over time (recent > old), negative = declining
+const DEPT_TIME_DRIFT: Record<string, number> = {
+    "dept-hr": 0.12,       // HR improving steadily
+    "dept-it": 0.08,       // IT slight improvement
+    "dept-finance": 0.05,  // Finance stable, tiny improvement
+    "dept-projects": -0.10, // Projects declining (overloaded)
+    "dept-customer": -0.15, // Customer service declining
+    "dept-commercial": 0.15, // Commercial improving fast
+    "dept-marketing": 0.10,  // Marketing improving
+    "dept-admin": -0.08,    // Admin slightly declining
+    "dept-sales": 0.20,     // Sales big improvement recently
+};
+
+function getTimeDriftMultiplier(date: string, deptId: string): number {
+    const now = new Date();
+    const recordDate = new Date(date);
+    const daysAgo = (now.getTime() - recordDate.getTime()) / (1000 * 60 * 60 * 24);
+    const yearsAgo = daysAgo / 365;
+    const drift = DEPT_TIME_DRIFT[deptId] ?? 0;
+    // drift applies per year: recent records get +drift, old records get -drift
+    // Clamp between -0.3 and +0.3 to avoid extreme values
+    return Math.max(-0.3, Math.min(0.3, drift * (1 - yearsAgo)));
 }
 
 function generateRecords(): DepartmentDailyRecordInterface[] {
@@ -133,7 +159,10 @@ function generateRecords(): DepartmentDailyRecordInterface[] {
             const isActive = registrationStatus === "تم";
 
             const totalTasks = isActive ? Math.floor(rand() * 8) + 3 : 0;
-            const executionRate = isActive ? tier.minExec + rand() * (tier.maxExec - tier.minExec) : 0;
+            // Apply time drift: recent records in improving depts get higher execution rates
+            const timeDrift = getTimeDriftMultiplier(date, employee.subDepartmentId);
+            const baseRate = isActive ? tier.minExec + rand() * (tier.maxExec - tier.minExec) : 0;
+            const executionRate = Math.max(0.05, Math.min(1.0, baseRate + timeDrift));
             const executedTasks = isActive ? Math.round(totalTasks * executionRate) : 0;
             const unexecutedTasks = totalTasks - executedTasks;
 
