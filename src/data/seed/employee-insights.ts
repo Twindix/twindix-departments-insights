@@ -333,7 +333,7 @@ function generateInsights(): EmployeeInsightsInterface[] {
 
         // Calculate weighted indicators score as decimal 0.0-1.0
         const indicatorsScore = Math.round(
-            objectives.reduce((sum, obj) => sum + (obj.actualPerformance / 100) * obj.relativeWeight, 0) * 1000
+            objectives.reduce((sum, obj) => sum + (obj.actualPerformance / 100) * obj.relativeWeight, 0) * 1000,
         ) / 1000;
 
         // Build per-employee competency template with department-specific 3rd competency
@@ -366,7 +366,7 @@ function generateInsights(): EmployeeInsightsInterface[] {
 
         // Calculate competencies score as decimal 0.0-1.0
         const competenciesScore = Math.round(
-            (competencies.reduce((sum, c) => sum + c.score, 0) / competencies.length) * 1000
+            (competencies.reduce((sum, c) => sum + c.score, 0) / competencies.length) * 1000,
         ) / 1000;
 
         // Administrative score as decimal 0.0-1.0 (varied: 0.55-0.98)
@@ -381,7 +381,7 @@ function generateInsights(): EmployeeInsightsInterface[] {
         const totalPercentage = Math.round(
             (competenciesScore * competenciesWeight +
                 indicatorsScore * indicatorsWeight +
-                administrativeScore * administrativeWeight) * 100 * 10
+                administrativeScore * administrativeWeight) * 100 * 10,
         ) / 10;
 
         const rating = getRating(totalPercentage);

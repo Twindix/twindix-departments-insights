@@ -147,7 +147,7 @@ function generateProjects(): ProjectInterface[] {
     // Start with even distribution, then nudge to get exact rounding
     const base = clamp(needed, 30, 98);
     let lastCost = base;
-    let lastTime = clamp(base, 25, 98);
+    const lastTime = clamp(base, 25, 98);
     let lastQuality = clamp(base, 35, 98);
 
     // Adjust to hit the exact avgPerformance

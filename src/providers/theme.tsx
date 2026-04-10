@@ -34,10 +34,10 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
             isDarkMode: theme === Theme.Dark,
             onToggleTheme: () =>
                 setTheme((prev) =>
-                    prev === Theme.Dark ? Theme.Light : Theme.Dark
+                    prev === Theme.Dark ? Theme.Light : Theme.Dark,
                 ),
         }),
-        [theme]
+        [theme],
     );
 
     return (

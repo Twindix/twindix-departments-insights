@@ -47,7 +47,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
             setStorageItem(storageKeys.authUser, updated);
             setUser(updated);
         },
-        [user]
+        [user],
     );
 
     const value = useMemo(
@@ -58,7 +58,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
             onLogout,
             onUpdateUser,
         }),
-        [user, onLogin, onLogout, onUpdateUser]
+        [user, onLogin, onLogout, onUpdateUser],
     );
 
     return (

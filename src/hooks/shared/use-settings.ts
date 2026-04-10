@@ -15,7 +15,7 @@ const defaultSettings: Settings = {
 export function useSettings() {
     const [settings, setSettings] = useLocalStorage<Settings>(
         storageKeys.settings,
-        defaultSettings
+        defaultSettings,
     );
 
     // Sync compact mode class to <html>
@@ -32,14 +32,14 @@ export function useSettings() {
         (updates: Partial<Settings>) => {
             setSettings((prev) => ({ ...prev, ...updates }));
         },
-        [setSettings]
+        [setSettings],
     );
 
     const fmtDate = useCallback(
         (dateString: string, overrideFormat?: "short" | "long" | "iso") => {
             return formatDateUtil(dateString, overrideFormat ?? settings.dateFormat);
         },
-        [settings.dateFormat]
+        [settings.dateFormat],
     );
 
     return {

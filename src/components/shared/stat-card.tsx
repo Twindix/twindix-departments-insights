@@ -28,7 +28,7 @@ export function StatCard({
         <Card
             className={cn(
                 "hover-lift p-4 flex items-start gap-3",
-                className
+                className,
             )}
         >
             <div

@@ -268,7 +268,7 @@ function FilteredTable({ employees, records, navigate, deptLabel, startMs, endMs
     const safeCurrentPage = Math.min(currentPage, totalPages);
     const paginatedEmployees = sortedEmployees.slice(
         (safeCurrentPage - 1) * pageSize,
-        safeCurrentPage * pageSize
+        safeCurrentPage * pageSize,
     );
     const startIndex = (safeCurrentPage - 1) * pageSize + 1;
     const endIndex = Math.min(safeCurrentPage * pageSize, sortedEmployees.length);
@@ -279,8 +279,8 @@ function FilteredTable({ employees, records, navigate, deptLabel, startMs, endMs
             ? Math.round(
                   employees.reduce(
                       (sum, m) => sum + (performanceMap.get(m.id) ?? 0),
-                      0
-                  ) / employees.length
+                      0,
+                  ) / employees.length,
               )
             : 0;
 
@@ -437,7 +437,7 @@ function FilteredTable({ employees, records, navigate, deptLabel, startMs, endMs
                                 <SelectItem key={key} value={key}>
                                     {label}
                                 </SelectItem>
-                            )
+                            ),
                         )}
                     </SelectContent>
                 </Select>
@@ -458,7 +458,7 @@ function FilteredTable({ employees, records, navigate, deptLabel, startMs, endMs
                                 <SelectItem key={key} value={key}>
                                     {label}
                                 </SelectItem>
-                            )
+                            ),
                         )}
                     </SelectContent>
                 </Select>
@@ -676,7 +676,7 @@ export function HrPerformanceView() {
                 return prev;
             }, { replace: true });
         },
-        [setSearchParams]
+        [setSearchParams],
     );
 
     // Tab change skeleton
@@ -701,10 +701,10 @@ export function HrPerformanceView() {
 
     const [preset, setPresetRaw] = useState<DatePreset>(urlPreset);
     const [startDate, setStartDateRaw] = useState<string>(
-        urlPreset === "custom" && urlFrom ? urlFrom : getPresetStartDate(urlPreset)
+        urlPreset === "custom" && urlFrom ? urlFrom : getPresetStartDate(urlPreset),
     );
     const [endDate, setEndDateRaw] = useState<string>(
-        urlPreset === "custom" && urlTo ? urlTo : todayStr
+        urlPreset === "custom" && urlTo ? urlTo : todayStr,
     );
 
     const startMs = new Date(startDate).getTime();

@@ -13,7 +13,7 @@ export function Header({ title, description, actions, className }: HeaderProps) 
         <div
             className={cn(
                 "flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between",
-                className
+                className,
             )}
         >
             <div>

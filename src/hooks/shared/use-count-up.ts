@@ -11,7 +11,7 @@ interface UseCountUpOptions {
 
 export function useCountUp(
     target: number,
-    options: UseCountUpOptions = {}
+    options: UseCountUpOptions = {},
 ): number {
     const { duration = 1000, decimals = 0 } = options;
     const [current, setCurrent] = useState(0);

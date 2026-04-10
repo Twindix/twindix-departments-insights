@@ -33,8 +33,6 @@ interface HrSection {
 }
 
 // Static percentages for the 9 non-performance sections (performance is computed)
-export const HR_SECTION_PERCENTAGES = [82, 76, 69, 71, /* performance slot */ 65, 78, 80, 67, 72];
-
 const HR_SECTIONS: HrSection[] = [
     { id: "review", name: "المراجعة", icon: SearchCheck, color: "#3B82F6", percentage: 82, isAccessible: false },
     { id: "structure", name: "الهيكل والتوظيف", icon: Briefcase, color: "#8B5CF6", percentage: 76, isAccessible: false },

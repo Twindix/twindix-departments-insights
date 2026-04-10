@@ -71,7 +71,7 @@ export function ProgressBar({
             <div
                 className={cn(
                     "progress-bar-track w-full",
-                    heightMap[size]
+                    heightMap[size],
                 )}
             >
                 <div

@@ -16,7 +16,7 @@ const SelectTrigger = forwardRef<
         dir="rtl"
         className={cn(
             "flex h-10 w-full items-center justify-between rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 text-sm text-right cursor-pointer hover:border-[var(--color-primary)] transition-colors placeholder:text-[var(--color-text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
-            className
+            className,
         )}
         {...props}
     >
@@ -39,7 +39,7 @@ const SelectContent = forwardRef<
             className={cn(
                 "relative z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] shadow-lg",
                 position === "popper" && "translate-y-1",
-                className
+                className,
             )}
             position={position}
             {...props}
@@ -48,7 +48,7 @@ const SelectContent = forwardRef<
                 className={cn(
                     "p-1",
                     position === "popper" &&
-                        "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]"
+                        "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]",
                 )}
             >
                 {children}
@@ -66,7 +66,7 @@ const SelectItem = forwardRef<
         ref={ref}
         className={cn(
             "relative flex w-full cursor-pointer select-none items-center rounded-lg py-1.5 pe-8 ps-2 text-sm text-right outline-none hover:bg-[var(--color-surface-hover)] focus:bg-[var(--color-surface-hover)] data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
-            className
+            className,
         )}
         {...props}
     >

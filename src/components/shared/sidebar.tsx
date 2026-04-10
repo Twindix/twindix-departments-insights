@@ -14,7 +14,7 @@ export function Sidebar() {
             <aside
                 className={cn(
                     "fixed top-0 right-0 z-40 flex h-screen flex-col border-l border-[var(--color-sidebar-border)] bg-[var(--color-sidebar-bg)] transition-all duration-300 max-lg:hidden",
-                    isOpen ? "w-[220px]" : "w-[64px]"
+                    isOpen ? "w-[220px]" : "w-[64px]",
                 )}
             >
                 {/* Toggle arrow — always positioned outside sidebar */}
@@ -28,7 +28,7 @@ export function Sidebar() {
                 {/* Logo */}
                 <div className={cn(
                     "flex h-16 items-center border-b border-[var(--color-sidebar-border)]",
-                    isOpen ? "px-4" : "justify-center"
+                    isOpen ? "px-4" : "justify-center",
                 )}>
                     {isOpen ? (
                         <div className="flex items-center gap-2 min-w-0">
@@ -59,7 +59,7 @@ export function Sidebar() {
                                     "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
                                     isActive
                                         ? "bg-[var(--color-sidebar-item-active)] text-[var(--color-primary)]"
-                                        : "text-[var(--color-text-secondary)] hover:bg-[var(--color-sidebar-item-hover)] hover:text-[var(--color-text-dark)]"
+                                        : "text-[var(--color-text-secondary)] hover:bg-[var(--color-sidebar-item-hover)] hover:text-[var(--color-text-dark)]",
                                 )}
                             >
                                 <Icon className="h-5 w-5 shrink-0" />

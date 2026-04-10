@@ -13,13 +13,13 @@ function ToggleSwitch({ checked, onChange, iconOn, iconOff }: { checked: boolean
             onClick={onChange}
             className={cn(
                 "relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2",
-                checked ? "bg-[var(--color-primary)]" : "bg-[var(--color-surface-active)]"
+                checked ? "bg-[var(--color-primary)]" : "bg-[var(--color-surface-active)]",
             )}
         >
             <span
                 className={cn(
                     "pointer-events-none flex h-5.5 w-5.5 items-center justify-center rounded-full bg-white shadow-sm transition-transform duration-200",
-                    checked ? "-translate-x-5.5" : "-translate-x-0.5"
+                    checked ? "-translate-x-5.5" : "-translate-x-0.5",
                 )}
             >
                 {checked ? iconOn : iconOff}

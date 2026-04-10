@@ -50,7 +50,7 @@ function TrendChart({
     const overlayRef = useRef<HTMLDivElement>(null);
 
     // Percentages for layout (CSS-based, not SVG viewBox)
-    const chartLeft = 6;   // % from right for Y-axis labels
+    const chartLeft = 6; // % from right for Y-axis labels
     const chartBottom = 14; // % from bottom for X-axis labels
 
     // Map points to percentage positions within the chart area
@@ -98,7 +98,7 @@ function TrendChart({
             }
             setHoveredIndex(nearest);
         },
-        [points, chartLeft]
+        [points, chartLeft],
     );
 
     const handleMouseLeave = useCallback(() => {
@@ -267,7 +267,7 @@ function TrendChart({
                                     height: hoveredIndex === i ? 12 : 8,
                                     margin: hoveredIndex === i ? 0 : 2,
                                     backgroundColor: hoveredIndex === i ? "var(--color-bg)" : "var(--color-primary)",
-                                    border: `2px solid var(--color-primary)`,
+                                    border: "2px solid var(--color-primary)",
                                     opacity: 0,
                                     animation: `fade-in 0.3s ease-out ${0.5 + i * 0.1}s forwards`,
                                 }}
@@ -391,7 +391,8 @@ function groupDatesByMode(dates: string[], mode: ViewMode): Map<string, string[]
                 key = date;
         }
         if (!groups.has(key)) groups.set(key, []);
-        groups.get(key)!.push(date);
+        const arr = groups.get(key);
+        if (arr) arr.push(date);
     }
     return groups;
 }
@@ -487,12 +488,12 @@ export function EmployeeProfileView() {
             allRecords
                 .filter((r) => r.employeeId === id)
                 .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()),
-        [allRecords, id]
+        [allRecords, id],
     );
 
     const allUniqueDates = useMemo(
         () => [...new Set(records.map((r) => r.date))].sort((a, b) => new Date(a).getTime() - new Date(b).getTime()),
-        [records]
+        [records],
     );
 
     const lastDate = allUniqueDates[allUniqueDates.length - 1] ?? new Date().toISOString().split("T")[0];
@@ -519,7 +520,6 @@ export function EmployeeProfileView() {
     const [preset, setPresetRaw] = useState<DatePreset>(urlPreset);
     const [startDate, setStartDateRaw] = useState<string>(initStart);
     const [endDate, setEndDateRaw] = useState<string>(initEnd);
-
 
     const syncUrl = useCallback((p: DatePreset, from: string, to: string) => {
         setSearchParams((prev) => {
@@ -551,7 +551,7 @@ export function EmployeeProfileView() {
                 syncUrl(p, startDate, endDate);
             }
         },
-        [lastDate, syncUrl, startDate, endDate]
+        [lastDate, syncUrl, startDate, endDate],
     );
 
     const handleStartDate = useCallback((val: string) => {
@@ -639,7 +639,7 @@ export function EmployeeProfileView() {
     // Unique dates from filtered records
     const uniqueDates = useMemo(
         () => [...new Set(filteredRecords.map((r) => r.date))].sort((a, b) => new Date(a).getTime() - new Date(b).getTime()),
-        [filteredRecords]
+        [filteredRecords],
     );
 
     // Computed stats from filtered records
@@ -651,31 +651,29 @@ export function EmployeeProfileView() {
 
     const totalTasks = useMemo(
         () => filteredRecords.reduce((s, r) => s + r.totalTasks, 0),
-        [filteredRecords]
+        [filteredRecords],
     );
 
     const totalExecuted = useMemo(
         () => filteredRecords.reduce((s, r) => s + r.executedTasks, 0),
-        [filteredRecords]
+        [filteredRecords],
     );
 
     const totalUnexecuted = useMemo(
         () => filteredRecords.reduce((s, r) => s + r.unexecutedTasks, 0),
-        [filteredRecords]
+        [filteredRecords],
     );
 
     const totalLostHours = useMemo(
         () => filteredRecords.reduce((s, r) => s + Math.max(0, r.lostHours), 0),
-        [filteredRecords]
+        [filteredRecords],
     );
-
-
 
     // Chart points from filtered active records
     // Available view modes based on selected date range
     const availableViewModes = useMemo(
         () => getAvailableViewModes(startDate, endDate),
-        [startDate, endDate]
+        [startDate, endDate],
     );
 
     // Grouped data for each section

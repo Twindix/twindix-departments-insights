@@ -74,15 +74,15 @@ const DATES = generateDates();
 // Department performance profiles — each department has a different bias
 // This ensures departments have genuinely different overall performance levels
 const DEPT_PERFORMANCE_BIAS: Record<string, number> = {
-    "dept-hr": 6,      // ~74% — mostly good
-    "dept-it": 5,      // ~72% — mixed
-    "dept-finance": 7,  // ~81% — strong
+    "dept-hr": 6, // ~74% — mostly good
+    "dept-it": 5, // ~72% — mixed
+    "dept-finance": 7, // ~81% — strong
     "dept-projects": 3, // ~62% — weaker
     "dept-customer": 1, // ~50% — struggling
     "dept-commercial": 2, // ~58% — below average
-    "dept-marketing": 8,  // ~85% — top performer
-    "dept-admin": 1,    // ~50% — struggling
-    "dept-sales": 8,    // ~85% — top performer
+    "dept-marketing": 8, // ~85% — top performer
+    "dept-admin": 1, // ~50% — struggling
+    "dept-sales": 8, // ~85% — top performer
 };
 
 function getEmployeeTier(employeeIndex: number, deptId: string): { minExec: number; maxExec: number; minHours: number; maxHours: number; absentRate: number } {
@@ -111,15 +111,15 @@ function getEmployeeTier(employeeIndex: number, deptId: string): { minExec: numb
 // Simulates real company trends: some depts improving, some declining over time
 // driftDirection: positive = improving over time (recent > old), negative = declining
 const DEPT_TIME_DRIFT: Record<string, number> = {
-    "dept-hr": 0.12,       // HR improving steadily
-    "dept-it": 0.08,       // IT slight improvement
-    "dept-finance": 0.05,  // Finance stable, tiny improvement
+    "dept-hr": 0.12, // HR improving steadily
+    "dept-it": 0.08, // IT slight improvement
+    "dept-finance": 0.05, // Finance stable, tiny improvement
     "dept-projects": -0.10, // Projects declining (overloaded)
     "dept-customer": -0.15, // Customer service declining
     "dept-commercial": 0.15, // Commercial improving fast
-    "dept-marketing": 0.10,  // Marketing improving
-    "dept-admin": -0.08,    // Admin slightly declining
-    "dept-sales": 0.20,     // Sales big improvement recently
+    "dept-marketing": 0.10, // Marketing improving
+    "dept-admin": -0.08, // Admin slightly declining
+    "dept-sales": 0.20, // Sales big improvement recently
 };
 
 function getTimeDriftMultiplier(date: string, deptId: string): number {

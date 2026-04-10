@@ -30,7 +30,7 @@ export function MobileNav() {
             <div
                 className={cn(
                     "fixed top-0 right-0 z-50 h-full w-[280px] bg-[var(--color-sidebar-bg)] border-l border-[var(--color-sidebar-border)] shadow-xl transition-transform duration-300 lg:hidden",
-                    isOpen ? "translate-x-0" : "translate-x-full"
+                    isOpen ? "translate-x-0" : "translate-x-full",
                 )}
             >
                 <div className="flex h-16 items-center justify-between border-b border-[var(--color-sidebar-border)] px-4">
@@ -62,7 +62,7 @@ export function MobileNav() {
                                     "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
                                     isActive
                                         ? "bg-[var(--color-sidebar-item-active)] text-[var(--color-primary)]"
-                                        : "text-[var(--color-text-secondary)] hover:bg-[var(--color-sidebar-item-hover)]"
+                                        : "text-[var(--color-text-secondary)] hover:bg-[var(--color-sidebar-item-hover)]",
                                 )}
                             >
                                 <Icon className="h-5 w-5 shrink-0" />

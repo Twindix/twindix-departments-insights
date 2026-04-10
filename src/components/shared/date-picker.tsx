@@ -53,13 +53,13 @@ export function DatePicker({ value, onChange, min, max, disabled, label }: DateP
                     "flex items-center gap-2 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 text-sm transition-all cursor-pointer",
                     "hover:border-[var(--color-primary)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] focus:outline-none",
                     disabled && "opacity-40 cursor-not-allowed hover:border-[var(--color-border)]",
-                    open && "border-[var(--color-primary)] ring-1 ring-[var(--color-primary)]"
+                    open && "border-[var(--color-primary)] ring-1 ring-[var(--color-primary)]",
                 )}
             >
                 <CalendarDays className="h-4 w-4 text-[var(--color-primary)] shrink-0" />
                 <span className={cn(
                     "flex-1 text-right tabular-nums",
-                    value ? "text-[var(--color-text-primary)]" : "text-[var(--color-text-muted)]"
+                    value ? "text-[var(--color-text-primary)]" : "text-[var(--color-text-muted)]",
                 )}>
                     {displayValue}
                 </span>

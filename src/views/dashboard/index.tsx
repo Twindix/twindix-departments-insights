@@ -17,7 +17,7 @@ export function DashboardView() {
 
     const totalEmployees = departments.reduce(
         (sum, d) => sum + d.employeeCount,
-        0
+        0,
     );
     // Average of all 9 department card percentages
     const avgPerformance = departments.length > 0

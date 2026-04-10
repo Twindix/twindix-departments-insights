@@ -1,6 +1,6 @@
 export function formatDate(
     dateString: string,
-    format: "short" | "long" | "iso" = "short"
+    format: "short" | "long" | "iso" = "short",
 ): string {
     const date = new Date(dateString);
 

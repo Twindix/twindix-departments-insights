@@ -22,7 +22,7 @@ export function EmployeeInsightsView() {
         (value: string) => {
             setSearchParams((prev) => { prev.set("tab", value); return prev; }, { replace: true });
         },
-        [setSearchParams]
+        [setSearchParams],
     );
 
     // Brief loading skeleton on tab change
@@ -283,7 +283,7 @@ export function EmployeeInsightsView() {
                                             ? Math.round(
                                                   (obj.actualPerformance /
                                                       obj.targetForPeriod) *
-                                                      100
+                                                      100,
                                               )
                                             : 0;
                                     return (
@@ -344,7 +344,7 @@ export function EmployeeInsightsView() {
                                         {comp.levels.find(
                                             (l) =>
                                                 l.level ===
-                                                comp.selectedLevel
+                                                comp.selectedLevel,
                                         )?.description ?? ""}
                                     </p>
                                 </CardContent>
@@ -382,14 +382,14 @@ export function EmployeeInsightsView() {
                             <CardContent className="space-y-4">
                                 <ProgressBar
                                     value={Math.round(
-                                        overallPerformance.indicatorsScore * 100
+                                        overallPerformance.indicatorsScore * 100,
                                     )}
                                     label={`الإنتاجية وفقاً للمؤشرات (${Math.round(overallPerformance.indicatorsWeight * 100)}%)`}
                                     size="md"
                                 />
                                 <ProgressBar
                                     value={Math.round(
-                                        overallPerformance.competenciesScore * 100
+                                        overallPerformance.competenciesScore * 100,
                                     )}
                                     label={`الجدارات (${Math.round(overallPerformance.competenciesWeight * 100)}%)`}
                                     size="md"
@@ -397,7 +397,7 @@ export function EmployeeInsightsView() {
                                 <ProgressBar
                                     value={Math.round(
                                         overallPerformance.administrativeScore *
-                                            100
+                                            100,
                                     )}
                                     label={`الالتزام الإداري (${Math.round(overallPerformance.administrativeWeight * 100)}%)`}
                                     size="md"

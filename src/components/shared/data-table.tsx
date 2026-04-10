@@ -66,7 +66,7 @@ export function DataTable<T>({
                                 className={cn(
                                     "px-4 py-3 text-right font-semibold text-[var(--color-text-secondary)]",
                                     col.sortable && "cursor-pointer select-none hover:text-[var(--color-text-dark)] transition-colors",
-                                    col.className
+                                    col.className,
                                 )}
                                 onClick={col.sortable && onSort ? () => onSort(col.key) : undefined}
                             >
@@ -75,7 +75,7 @@ export function DataTable<T>({
                                     {col.sortable && onSort && (
                                         <span className={cn(
                                             "inline-flex",
-                                            getSortDirection(col.key) && "text-[var(--color-primary)]"
+                                            getSortDirection(col.key) && "text-[var(--color-primary)]",
                                         )}>
                                             {getSortIcon(col.key)}
                                         </span>
@@ -93,7 +93,7 @@ export function DataTable<T>({
                             className={cn(
                                 "border-b border-[var(--color-border)] last:border-b-0 transition-colors",
                                 onRowClick &&
-                                    "cursor-pointer hover:bg-[var(--color-surface-hover)]"
+                                    "cursor-pointer hover:bg-[var(--color-surface-hover)]",
                             )}
                         >
                             {columns.map((col) => (
@@ -101,7 +101,7 @@ export function DataTable<T>({
                                     key={col.key}
                                     className={cn(
                                         "px-4 py-3 text-[var(--color-text-primary)]",
-                                        col.className
+                                        col.className,
                                     )}
                                 >
                                     {col.render(item, index)}

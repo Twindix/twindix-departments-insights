@@ -65,13 +65,13 @@ export function ScoreGauge({
         <div
             className={cn(
                 "relative flex flex-col items-center justify-center",
-                className
+                className,
             )}
         >
             <div
                 className={cn(
                     "relative flex items-center justify-center rounded-full",
-                    sizes.container
+                    sizes.container,
                 )}
                 style={{
                     background: `conic-gradient(${color} ${angle}deg, var(--color-surface) ${angle}deg)`,
@@ -82,14 +82,14 @@ export function ScoreGauge({
                         "absolute rounded-full bg-[var(--color-bg)] flex items-center justify-center",
                         size === "sm" && "w-11 h-11",
                         size === "md" && "w-17 h-17",
-                        size === "lg" && "w-24 h-24"
+                        size === "lg" && "w-24 h-24",
                     )}
                 >
                     {showPercentage && (
                         <span
                             className={cn(
                                 "font-bold tabular-nums",
-                                sizes.text
+                                sizes.text,
                             )}
                             style={{ color }}
                         >
@@ -102,7 +102,7 @@ export function ScoreGauge({
                 <span
                     className={cn(
                         "mt-2 text-center text-[var(--color-text-secondary)] font-medium",
-                        sizes.label
+                        sizes.label,
                     )}
                 >
                     {label}

@@ -29,7 +29,7 @@ export function DepartmentCircle({
                 isAccessible && "border-[var(--color-success)] ring-2 ring-[var(--color-success)]/30 hover:ring-[var(--color-success)]/50 hover:scale-[1.03]",
                 !isAccessible && "border-[var(--color-border)] hover:border-white/30 hover:scale-[1.02]",
                 !isAccessible && "opacity-85",
-                className
+                className,
             )}
         >
             <div className="relative">

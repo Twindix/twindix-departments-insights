@@ -3,7 +3,7 @@ import { getStorageItem, setStorageItem } from "@/utils";
 
 export function useLocalStorage<T>(
     key: string,
-    initialValue: T
+    initialValue: T,
 ): [T, (value: T | ((prev: T) => T)) => void] {
     const [storedValue, setStoredValue] = useState<T>(() => {
         const item = getStorageItem<T>(key);
@@ -19,7 +19,7 @@ export function useLocalStorage<T>(
                 return newValue;
             });
         },
-        [key]
+        [key],
     );
 
     return [storedValue, setValue];
