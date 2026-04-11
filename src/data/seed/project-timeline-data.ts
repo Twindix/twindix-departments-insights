@@ -1,6 +1,5 @@
 import type { ProjectInterface } from "@/interfaces";
 import { hashStringSeed, seededRandom } from "./prng";
-import { project1TimelineData } from "./project-1-timeline-data";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -123,8 +122,6 @@ function ymKey(d: Date): string {
 const cache = new Map<string, TimelineData>();
 
 export function getProjectTimelineData(project: ProjectInterface): TimelineData {
-    if (project.id === "1") return project1TimelineData;
-
     const cached = cache.get(project.id);
     if (cached) return cached;
     const data = generateTimelineData(project);

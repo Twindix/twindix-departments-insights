@@ -1,6 +1,5 @@
 import type { ProjectInterface } from "@/interfaces";
 import { hashStringSeed, seededRandom } from "./prng";
-import { project1CostData } from "./project-1-cost-data";
 
 // ── Types (one per Excel sheet) ────────────────────────────────────────────
 
@@ -272,10 +271,6 @@ const RISK_TEMPLATES: { risk: string; response: string; owner: string; notes: st
 const cache = new Map<string, CostData>();
 
 export function getProjectCostData(project: ProjectInterface): CostData {
-    // Project "1" is the real 120-villa compound — its data is the verbatim
-    // Excel content rather than the seeded simulator output.
-    if (project.id === "1") return project1CostData;
-
     const cached = cache.get(project.id);
     if (cached) return cached;
     const data = generateCostData(project);

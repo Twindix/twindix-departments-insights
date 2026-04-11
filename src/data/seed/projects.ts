@@ -176,11 +176,13 @@ function generateProjects(): ProjectInterface[] {
         }
     }
 
-    // Override project "1" with the real 120-villa compound from the Excel
-    // source files. The numbers are calibrated against the Cost / Quality /
-    // Timeline workbooks so the customer-facing demo reflects actual data.
+    // Override the first generated project with the showcase 120-villa
+    // compound. Its scores are tuned high so the simulator (which is
+    // calibrated against project.cost / time / quality) produces a clean
+    // healthy data set across the cost / quality / timeline pages — ideal
+    // for the first card a viewer will click during a presentation.
     projects[0] = {
-        id: "1",
+        ...projects[0],
         name: "مجمع الفيصل السكني — 120 فيلا",
         description: "مشروع مجمع سكني متكامل يضم 120 فيلا بثلاثة طرز معمارية، يشمل المرافق الترفيهية والخدمية الكاملة.",
         longDescription:
@@ -194,21 +196,18 @@ function generateProjects(): ProjectInterface[] {
         currentEndDate: "2027-08-28",
         status: "in-progress",
         contractorCount: 4,
-        // Scores derived from the Excel files:
-        //   cost score 91% — variance ~1.83%, expected margin 25.32%
-        //   time score 85% — avg delay 6.2 days, 65% complete
-        //   quality score 96% — quality index 0.965
         cost: 91,
         time: 85,
         quality: 96,
         avgPerformance: 91,
-        isAccessible: true,
     };
 
-    // Sort by avgPerformance descending, then pin project "1" to the top so
-    // the real-data showcase project is always the first card on the list.
+    // Sort by avgPerformance descending, then pin the showcase project
+    // (always the first one generated) to the top so it stays first even
+    // if other projects roll a slightly higher avg.
+    const showcaseId = projects[0].id;
     projects.sort((a, b) => b.avgPerformance - a.avgPerformance);
-    const pinIdx = projects.findIndex((p) => p.id === "1");
+    const pinIdx = projects.findIndex((p) => p.id === showcaseId);
     if (pinIdx > 0) {
         const [pinned] = projects.splice(pinIdx, 1);
         projects.unshift(pinned);
