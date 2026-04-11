@@ -6,6 +6,7 @@ export {
     ProjectsView,
     ProjectPlaceholderView,
     ProjectDetailView,
+    ProjectCostView,
 } from "./departments/projects";
 export { FinanceView } from "./departments/finance";
 export { EmployeeProfileView } from "./employees/profile";
