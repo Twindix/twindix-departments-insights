@@ -137,46 +137,64 @@ export function BarChart({
         );
     }
 
-    // Vertical
-    return (
-        <div className={cn("flex items-end justify-around gap-2", className)} style={{ height }}>
-            {data.map((item, idx) => {
-                const total = item.segments
-                    ? item.segments.reduce((s, seg) => s + seg.value, 0)
-                    : item.value ?? 0;
-                const heightPct = animated ? (total / max) * 100 : 0;
+    // ── Vertical ──────────────────────────────────────────────────────────
+    // The chart and the labels row are split into two siblings with explicit
+    // pixel heights. This avoids the % heights collapsing inside flex-col,
+    // which is what prevented the previous implementation from rendering.
+    const labelsAreaHeight = showValues ? 34 : 20;
+    const chartAreaHeight = Math.max(20, height - labelsAreaHeight);
 
-                return (
-                    <div key={idx} className="flex min-w-0 flex-1 flex-col items-center gap-2">
-                        <div className="relative flex w-full flex-1 flex-col-reverse">
+    return (
+        <div className={cn("flex flex-col", className)} style={{ height }}>
+            <div
+                className="flex items-end justify-around gap-2"
+                style={{ height: chartAreaHeight }}
+            >
+                {data.map((item, idx) => {
+                    const total = item.segments
+                        ? item.segments.reduce((s, seg) => s + seg.value, 0)
+                        : item.value ?? 0;
+                    const totalPx = animated
+                        ? Math.round((total / max) * chartAreaHeight)
+                        : 0;
+
+                    return (
+                        <div
+                            key={idx}
+                            className="relative flex min-w-0 flex-1 flex-col-reverse overflow-hidden rounded-t-md transition-all duration-700 ease-out"
+                            style={{ height: totalPx }}
+                            title={item.label}
+                        >
                             {item.segments
                                 ? (() => {
                                     const segments = item.segments;
                                     return segments.map((seg, i) => {
-                                        const segPct = total > 0 ? (seg.value / total) * heightPct : 0;
+                                        const segPx = total > 0
+                                            ? Math.round((seg.value / total) * totalPx)
+                                            : 0;
                                         return (
                                             <div
                                                 key={i}
-                                                className={cn(
-                                                    "w-full transition-all duration-700 ease-out",
-                                                    i === segments.length - 1 && "rounded-t-md",
-                                                )}
+                                                className="w-full"
                                                 style={{
-                                                    height: `${segPct}%`,
+                                                    height: `${segPx}px`,
                                                     backgroundColor:
                                                         seg.color
                                                         ?? DEFAULT_PALETTE[i % DEFAULT_PALETTE.length],
                                                 }}
-                                                title={seg.name ? `${seg.name}: ${valueFormatter(seg.value)}` : undefined}
+                                                title={
+                                                    seg.name
+                                                        ? `${seg.name}: ${valueFormatter(seg.value)}`
+                                                        : undefined
+                                                }
                                             />
                                         );
                                     });
                                 })()
                                 : (
                                     <div
-                                        className="w-full rounded-t-md transition-all duration-700 ease-out"
+                                        className="h-full w-full"
                                         style={{
-                                            height: `${heightPct}%`,
                                             backgroundColor:
                                                 item.color
                                                 ?? DEFAULT_PALETTE[idx % DEFAULT_PALETTE.length],
@@ -184,20 +202,33 @@ export function BarChart({
                                     />
                                 )}
                         </div>
-                        {showValues && (
-                            <span className="text-[10px] font-medium tabular-nums text-[var(--color-text-secondary)]">
-                                {valueFormatter(total)}
+                    );
+                })}
+            </div>
+
+            {/* Labels row — value above column label, both centered per column */}
+            <div className="mt-1.5 flex justify-around gap-2">
+                {data.map((item, idx) => {
+                    const total = item.segments
+                        ? item.segments.reduce((s, seg) => s + seg.value, 0)
+                        : item.value ?? 0;
+                    return (
+                        <div key={idx} className="flex min-w-0 flex-1 flex-col items-center gap-0.5">
+                            {showValues && (
+                                <span className="text-[10px] font-semibold tabular-nums text-[var(--color-text-secondary)]">
+                                    {valueFormatter(total)}
+                                </span>
+                            )}
+                            <span
+                                className="w-full truncate text-center text-[10px] text-[var(--color-text-muted)]"
+                                title={item.label}
+                            >
+                                {item.label}
                             </span>
-                        )}
-                        <span
-                            className="w-full truncate text-center text-[10px] text-[var(--color-text-muted)]"
-                            title={item.label}
-                        >
-                            {item.label}
-                        </span>
-                    </div>
-                );
-            })}
+                        </div>
+                    );
+                })}
+            </div>
         </div>
     );
 }

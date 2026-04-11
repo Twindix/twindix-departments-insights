@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Eye, Filter, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search, X, Loader2, CalendarDays, Users } from "lucide-react";
+import { ArrowLeft, Eye, Filter, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search, X, Loader2, CalendarDays, Users, ChevronDown, ChevronUp } from "lucide-react";
 import { Header, ProgressBar, DataTable, DatePicker, EmptyState, BarChart, type SortState, type SortDirection } from "@/components/shared";
 import { useDeferredLoad, usePageTitle } from "@/hooks";
 import { Button, Input, Badge, Card, CardContent } from "@/atoms";
@@ -823,6 +823,18 @@ export function HrPerformanceView() {
         return total > 0 ? Math.round(sum / total) : 0;
     }, [subDeptStats]);
 
+    // Overview chart collapse state — persisted in the URL so a refresh
+    // remembers the user's preference. Defaults to collapsed; an explicit
+    // ?overview=expanded keeps it open across reloads.
+    const overviewCollapsed = searchParams.get("overview") !== "expanded";
+    const toggleOverview = useCallback(() => {
+        setSearchParams((prev) => {
+            if (overviewCollapsed) prev.set("overview", "expanded");
+            else prev.delete("overview");
+            return prev;
+        }, { replace: true });
+    }, [overviewCollapsed, setSearchParams]);
+
     if (!isReady) return <LoadingSkeleton />;
 
     return (
@@ -869,38 +881,54 @@ export function HrPerformanceView() {
                 </div>
             </div>
 
-            {/* Sub-department performance overview */}
+            {/* Sub-department performance overview — collapsible */}
             <Card>
-                <CardContent className="p-6">
-                    <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                        <div>
-                            <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
-                                متوسط الأداء حسب القسم
-                            </h3>
-                            <p className="mt-0.5 text-[11px] text-[var(--color-text-muted)]">
-                                ترتيب الأقسام الداخلية حسب نسبة تنفيذ الأعمال خلال الفترة المحددة
-                            </p>
+                <CardContent className={overviewCollapsed ? "p-4" : "p-6"}>
+                    <button
+                        type="button"
+                        onClick={toggleOverview}
+                        className="flex w-full items-center justify-between gap-3 cursor-pointer text-start"
+                    >
+                        <div className="flex items-center gap-3 min-w-0">
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--color-surface)] text-[var(--color-text-muted)] transition-transform duration-300" style={{ transform: overviewCollapsed ? "rotate(0deg)" : "rotate(180deg)" }}>
+                                {overviewCollapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+                            </div>
+                            <div className="min-w-0">
+                                <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
+                                    متوسط الأداء حسب القسم
+                                </h3>
+                                {!overviewCollapsed && (
+                                    <p className="mt-0.5 text-[11px] text-[var(--color-text-muted)]">
+                                        ترتيب الأقسام الداخلية حسب نسبة تنفيذ الأعمال خلال الفترة المحددة
+                                    </p>
+                                )}
+                            </div>
                         </div>
-                        <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-end">
-                            <p className="text-[10px] text-[var(--color-text-muted)]">المتوسط العام</p>
-                            <p className="mt-0.5 text-base font-bold tabular-nums text-[var(--color-text-primary)]">
+                        <div className="flex shrink-0 items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-end">
+                            <span className="text-[10px] text-[var(--color-text-muted)]">المتوسط العام</span>
+                            <span className="text-sm font-bold tabular-nums text-[var(--color-text-primary)]">
                                 {orgAvg}%
-                            </p>
+                            </span>
                         </div>
-                    </div>
-                    <BarChart
-                        data={subDeptStats.map((d) => ({
-                            label: d.name,
-                            value: d.avg,
-                            sublabel: `${d.employees} موظف`,
-                            color:
-                                d.avg >= 80 ? "var(--color-success)"
-                                    : d.avg >= 60 ? "var(--color-primary)"
-                                        : d.avg >= 45 ? "var(--color-warning)"
-                                            : "var(--color-error)",
-                        }))}
-                        valueFormatter={(v) => `${v}%`}
-                    />
+                    </button>
+
+                    {!overviewCollapsed && (
+                        <div className="mt-5">
+                            <BarChart
+                                data={subDeptStats.map((d) => ({
+                                    label: d.name,
+                                    value: d.avg,
+                                    sublabel: `${d.employees} موظف`,
+                                    color:
+                                        d.avg >= 80 ? "var(--color-success)"
+                                            : d.avg >= 60 ? "var(--color-primary)"
+                                                : d.avg >= 45 ? "var(--color-warning)"
+                                                    : "var(--color-error)",
+                                }))}
+                                valueFormatter={(v) => `${v}%`}
+                            />
+                        </div>
+                    )}
                 </CardContent>
             </Card>
 
