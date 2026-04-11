@@ -181,16 +181,17 @@ export function GanttChart({
                                                 backgroundColor: STATUS_COLORS[phase.status],
                                             }}
                                             onMouseEnter={(e) => {
-                                                const rect = e.currentTarget.getBoundingClientRect();
-                                                const containerRect = e.currentTarget.closest(".relative")?.getBoundingClientRect();
-                                                if (containerRect) {
-                                                    setHover({
-                                                        x: rect.left + rect.width / 2 - containerRect.left,
-                                                        y: rect.top - containerRect.top,
-                                                        phase,
-                                                        unitLabel: unit.label,
-                                                    });
-                                                }
+                                                setHover({
+                                                    x: e.clientX,
+                                                    y: e.clientY,
+                                                    phase,
+                                                    unitLabel: unit.label,
+                                                });
+                                            }}
+                                            onMouseMove={(e) => {
+                                                setHover((prev) =>
+                                                    prev ? { ...prev, x: e.clientX, y: e.clientY } : prev,
+                                                );
                                             }}
                                             onMouseLeave={() => setHover(null)}
                                             onClick={(e) => e.stopPropagation()}
@@ -215,27 +216,17 @@ export function GanttChart({
                             </div>
                         </div>
                     ))}
-
-                    {/* Today line label (top) */}
-                    {todayPct !== null && (
-                        <div
-                            className="pointer-events-none absolute z-30 -translate-x-1/2 rounded bg-[var(--color-error)] px-1.5 py-0.5 text-[9px] font-bold text-white"
-                            style={{
-                                top: 4,
-                                right: `calc(${todayPct * 100}% * (100% - ${labelColumnWidth}px) / 100% + ${labelColumnWidth}px - ${(todayPct * minBodyWidth)}px - 12px)`,
-                            }}
-                        />
-                    )}
                 </div>
             </div>
 
-            {/* Hover tooltip */}
+            {/* Hover tooltip — fixed to viewport, anchored above the cursor */}
             {hover && (
                 <div
                     className="pointer-events-none fixed z-50 max-w-xs rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 text-xs shadow-lg"
                     style={{
-                        left: hover.x + 16,
-                        top: hover.y + 16,
+                        left: hover.x,
+                        top: hover.y,
+                        transform: "translate(-50%, calc(-100% - 14px))",
                     }}
                 >
                     <p className="text-[10px] text-[var(--color-text-muted)]">{hover.unitLabel}</p>

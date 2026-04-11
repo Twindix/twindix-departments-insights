@@ -478,10 +478,14 @@ export function EmployeeProfileView() {
 
     const [cvOpen, setCvOpen] = useState(false);
 
-    // Where to return when "العودة" is clicked. Falls back to the HR perf list.
-    const fromList =
-        (location.state as { from?: string } | null)?.from
-        ?? routesData.departmentHrPerformance;
+    // The HR performance management list is the canonical "list" the profile
+    // page belongs to. Back button always goes there regardless of how the
+    // user got here, so explore chains never bounce mid-flow.
+    const backToList = routesData.departmentHrPerformance;
+    // Preserve the original list URL (with filters / page) when forwarding to
+    // the insights sub-page so its own profile-back chain still works.
+    const forwardListState =
+        (location.state as { from?: string } | null)?.from ?? backToList;
 
     const employees = seedEmployees;
     const allRecords = seedDepartmentRecords;
@@ -786,9 +790,10 @@ export function EmployeeProfileView() {
                             </Button>
                         )}
                         <Button
+                            variant="outline"
                             onClick={() =>
                                 navigate(getEmployeeInsightsPath(employee.id), {
-                                    state: { from: fromList },
+                                    state: { from: forwardListState },
                                 })
                             }
                             className="gap-2"
@@ -798,11 +803,11 @@ export function EmployeeProfileView() {
                         </Button>
                         <Button
                             variant="outline"
-                            onClick={() => navigate(fromList)}
+                            onClick={() => navigate(backToList)}
                             className="gap-2"
                         >
                             <ArrowLeft className="h-4 w-4" />
-                            العودة للقائمة
+                            العودة لإدارة الأداء
                         </Button>
                     </div>
                 }

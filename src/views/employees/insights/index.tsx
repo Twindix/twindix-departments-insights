@@ -1,6 +1,6 @@
 import { useCallback, useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useLocation, useSearchParams } from "react-router-dom";
-import { User, Target, Award, BarChart3, FileText, BookOpen, Star } from "lucide-react";
+import { ArrowLeft, Target, Award, BarChart3, FileText, BookOpen, Star } from "lucide-react";
 import { Header, ScoreGauge, ProgressBar, EmployeeInsightsSkeleton } from "@/components/shared";
 import { Button, Card, CardHeader, CardTitle, CardContent, Badge } from "@/atoms";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/ui";
@@ -109,6 +109,7 @@ export function EmployeeInsightsView() {
                     <div className="flex items-center gap-2">
                         {id && (
                             <Button
+                                variant="outline"
                                 onClick={() =>
                                     navigate(getEmployeeProfilePath(id), {
                                         state: fromList ? { from: fromList } : undefined,
@@ -116,8 +117,8 @@ export function EmployeeInsightsView() {
                                 }
                                 className="gap-2"
                             >
-                                <User className="h-4 w-4" />
-                                ملف الموظف
+                                <ArrowLeft className="h-4 w-4" />
+                                العودة لملف الموظف
                             </Button>
                         )}
                     </div>

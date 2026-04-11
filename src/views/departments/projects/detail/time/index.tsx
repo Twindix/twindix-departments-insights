@@ -22,7 +22,7 @@ const TAB_LABELS: Record<TabValue, string> = {
     "overview": "نظرة عامة",
     "schedule": "الجدول الرئيسي",
     "phases": "تفاصيل المراحل",
-    "gantt": "مخطط جانت",
+    "gantt": "الجدولة الزمنية",
     "milestones": "المعالم والتجميع",
     "assumptions": "الافتراضات",
 };
