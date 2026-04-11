@@ -1,5 +1,5 @@
 import { Card, CardContent, Badge } from "@/atoms";
-import { DonutChart } from "@/components/shared";
+import { BarChart, DonutChart } from "@/components/shared";
 import { formatUsdAsSar, formatPercentage } from "@/utils";
 import type { CostData, SensitiveIndicator } from "@/data/seed";
 import { KpiTile } from "../kpi-tile";
@@ -26,6 +26,56 @@ export function RevenueProfitabilityTab({ data }: RevenueProfitabilityTabProps) 
 
     return (
         <div className="space-y-6">
+            {/* Budget / EAC / actual / revenue comparison at the top */}
+            <Card>
+                <CardContent className="p-6">
+                    <h3 className="mb-4 text-sm font-semibold text-[var(--color-text-primary)]">
+                        مقارنة الميزانية، التكلفة، والإيرادات
+                    </h3>
+                    <BarChart
+                        data={[
+                            {
+                                label: "الإيرادات التعاقدية",
+                                value: p.contractedRevenue,
+                                color: "var(--color-success)",
+                                sublabel: "إيرادات مخططة",
+                            },
+                            {
+                                label: "الإيراد المعترف به",
+                                value: p.recognizedRevenue,
+                                color: "#34d399",
+                                sublabel: "حتى تاريخه",
+                            },
+                            {
+                                label: "الميزانية الأصلية",
+                                value: p.originalBudget,
+                                color: "var(--color-primary)",
+                                sublabel: "اعتماد مالي",
+                            },
+                            {
+                                label: "التكلفة المتوقعة",
+                                value: p.eac,
+                                color: "var(--color-warning)",
+                                sublabel: "EAC",
+                            },
+                            {
+                                label: "الصرف الفعلي",
+                                value: p.actualCostToDate,
+                                color: "#fb923c",
+                                sublabel: "حتى تاريخه",
+                            },
+                            {
+                                label: "الربح المتوقع النهائي",
+                                value: p.expectedFinalProfit,
+                                color: "#a78bfa",
+                                sublabel: `هامش ${formatPercentage(p.expectedMargin)}`,
+                            },
+                        ]}
+                        valueFormatter={(v) => formatUsdAsSar(v, { compact: true })}
+                    />
+                </CardContent>
+            </Card>
+
             <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
                 <KpiTile
                     label="إجمالي الإيرادات التعاقدية"

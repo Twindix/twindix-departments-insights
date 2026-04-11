@@ -1,9 +1,9 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Eye, Filter, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search, X, Loader2, CalendarDays, Users } from "lucide-react";
-import { Header, ProgressBar, DataTable, DatePicker, EmptyState, type SortState, type SortDirection } from "@/components/shared";
+import { Header, ProgressBar, DataTable, DatePicker, EmptyState, BarChart, type SortState, type SortDirection } from "@/components/shared";
 import { useDeferredLoad, usePageTitle } from "@/hooks";
-import { Button, Input, Badge } from "@/atoms";
+import { Button, Input, Badge, Card, CardContent } from "@/atoms";
 import { Tabs, TabsList, TabsTrigger, TabsContent, Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/ui";
 import { routesData, getEmployeeProfilePath, getEmployeeInsightsPath } from "@/data";
 import { seedDepartmentRecords, seedSubDepartments, seedEmployees } from "@/data/seed";
@@ -776,6 +776,53 @@ export function HrPerformanceView() {
         return employees.filter((m) => m.subDepartmentId === subDeptId);
     };
 
+    // Per-sub-department avg performance for the active date range —
+    // single pass through records, then bucket by employee.subDepartmentId.
+    const subDeptStats = useMemo(() => {
+        const empPerf = new Map<string, { sum: number; count: number }>();
+        for (const r of records) {
+            if (r.executedWorkPercentage <= 0) continue;
+            const t = new Date(r.date).getTime();
+            if (t < startMs || t > endMs) continue;
+            const cur = empPerf.get(r.employeeId) ?? { sum: 0, count: 0 };
+            cur.sum += r.executedWorkPercentage;
+            cur.count += 1;
+            empPerf.set(r.employeeId, cur);
+        }
+
+        const subAgg = new Map<string, { sum: number; count: number; employees: number }>();
+        for (const m of employees) {
+            const cur = subAgg.get(m.subDepartmentId) ?? { sum: 0, count: 0, employees: 0 };
+            cur.employees += 1;
+            const recs = empPerf.get(m.id);
+            if (recs && recs.count > 0) {
+                cur.sum += (recs.sum / recs.count) * 100;
+                cur.count += 1;
+            }
+            subAgg.set(m.subDepartmentId, cur);
+        }
+
+        return subDepartments
+            .map((sd) => {
+                const a = subAgg.get(sd.id);
+                const avg = a && a.count > 0 ? a.sum / a.count : 0;
+                return {
+                    id: sd.id,
+                    name: sd.name,
+                    employees: a?.employees ?? 0,
+                    avg: Math.round(avg),
+                };
+            })
+            .sort((a, b) => b.avg - a.avg);
+    }, [employees, records, subDepartments, startMs, endMs]);
+
+    const orgAvg = useMemo(() => {
+        if (subDeptStats.length === 0) return 0;
+        const sum = subDeptStats.reduce((s, d) => s + d.avg * d.employees, 0);
+        const total = subDeptStats.reduce((s, d) => s + d.employees, 0);
+        return total > 0 ? Math.round(sum / total) : 0;
+    }, [subDeptStats]);
+
     if (!isReady) return <LoadingSkeleton />;
 
     return (
@@ -821,6 +868,41 @@ export function HrPerformanceView() {
                     {isCustom && <span className="text-[10px] text-[var(--color-text-muted)] shrink-0 pb-2">(أقصى حد: ٣ سنوات)</span>}
                 </div>
             </div>
+
+            {/* Sub-department performance overview */}
+            <Card>
+                <CardContent className="p-6">
+                    <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
+                                متوسط الأداء حسب القسم
+                            </h3>
+                            <p className="mt-0.5 text-[11px] text-[var(--color-text-muted)]">
+                                ترتيب الأقسام الداخلية حسب نسبة تنفيذ الأعمال خلال الفترة المحددة
+                            </p>
+                        </div>
+                        <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-end">
+                            <p className="text-[10px] text-[var(--color-text-muted)]">المتوسط العام</p>
+                            <p className="mt-0.5 text-base font-bold tabular-nums text-[var(--color-text-primary)]">
+                                {orgAvg}%
+                            </p>
+                        </div>
+                    </div>
+                    <BarChart
+                        data={subDeptStats.map((d) => ({
+                            label: d.name,
+                            value: d.avg,
+                            sublabel: `${d.employees} موظف`,
+                            color:
+                                d.avg >= 80 ? "var(--color-success)"
+                                    : d.avg >= 60 ? "var(--color-primary)"
+                                        : d.avg >= 45 ? "var(--color-warning)"
+                                            : "var(--color-error)",
+                        }))}
+                        valueFormatter={(v) => `${v}%`}
+                    />
+                </CardContent>
+            </Card>
 
             <Tabs value={tab} onValueChange={handleTabChange} dir="rtl">
                 <TabsList>
