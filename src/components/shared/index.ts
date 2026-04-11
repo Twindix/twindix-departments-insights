@@ -27,6 +27,7 @@ export {
     BarChart,
     LineChart,
     DonutChart,
+    GanttChart,
     ChartLegend,
     ChartTooltip,
 } from "./charts";
@@ -35,5 +36,7 @@ export type {
     BarSegment,
     LineSeries,
     DonutChartItem,
+    GanttUnit,
+    GanttPhase,
     LegendItem,
 } from "./charts";

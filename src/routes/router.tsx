@@ -10,10 +10,10 @@ import {
     HrDepartmentView,
     HrPerformanceView,
     ProjectsView,
-    ProjectPlaceholderView,
     ProjectDetailView,
     ProjectCostView,
     ProjectQualityView,
+    ProjectTimeView,
     FinanceView,
     EmployeeProfileView,
     EmployeeInsightsView,
@@ -81,7 +81,7 @@ export const router = createBrowserRouter([
                     },
                     {
                         path: routesData.departmentProjectTime,
-                        element: <ProjectPlaceholderView section="time" />,
+                        element: <ProjectTimeView />,
                         errorElement: <RouteError />,
                     },
                     {

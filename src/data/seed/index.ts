@@ -40,3 +40,16 @@ export type {
     HandoverItem,
     QualityDashboardData,
 } from "./project-quality-data";
+export { getProjectTimelineData } from "./project-timeline-data";
+export type {
+    TimelineData,
+    TimelineUnit,
+    TimelinePhase,
+    TimelineUnitStatus,
+    TimelinePhaseStatus,
+    TimelineRiskLevel,
+    TimelineMonthlyAggregation,
+    TimelineMilestone,
+    TimelineSummary,
+    TimelineAssumption,
+} from "./project-timeline-data";

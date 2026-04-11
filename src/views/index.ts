@@ -4,10 +4,10 @@ export { HrDepartmentView } from "./departments/hr/sections";
 export { HrPerformanceView } from "./departments/hr";
 export {
     ProjectsView,
-    ProjectPlaceholderView,
     ProjectDetailView,
     ProjectCostView,
     ProjectQualityView,
+    ProjectTimeView,
 } from "./departments/projects";
 export { FinanceView } from "./departments/finance";
 export { EmployeeProfileView } from "./employees/profile";

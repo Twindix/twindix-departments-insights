@@ -5,6 +5,8 @@ export { LineChart } from "./line-chart";
 export type { LineSeries } from "./line-chart";
 export { DonutChart } from "./donut-chart";
 export type { DonutChartItem } from "./donut-chart";
+export { GanttChart } from "./gantt-chart";
+export type { GanttUnit, GanttPhase } from "./gantt-chart";
 export { ChartTooltip } from "./chart-tooltip";
 export { ChartLegend } from "./chart-legend";
 export type { LegendItem } from "./chart-legend";
