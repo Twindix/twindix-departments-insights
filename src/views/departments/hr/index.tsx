@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Eye, Filter, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search, X, Loader2, CalendarDays, Users } from "lucide-react";
 import { Header, ProgressBar, DataTable, DatePicker, EmptyState, type SortState, type SortDirection } from "@/components/shared";
 import { useDeferredLoad, usePageTitle } from "@/hooks";
@@ -86,6 +86,10 @@ function TableSkeleton() {
 
 function FilteredTable({ employees, records, navigate, deptLabel, startMs, endMs }: FilteredTableProps) {
     const [searchParams, setSearchParams] = useSearchParams();
+    const location = useLocation();
+    // Captured fresh on every render so back navigation always lands on the
+    // exact list URL the user was looking at (filters / sort / page included).
+    const fromUrl = location.pathname + location.search;
 
     // Brief loading state on filter/sort/duration changes
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -369,7 +373,7 @@ function FilteredTable({ employees, records, navigate, deptLabel, startMs, endMs
                     size="sm"
                     onClick={(e) => {
                         e.stopPropagation();
-                        navigate(getEmployeeInsightsPath(m.id));
+                        navigate(getEmployeeInsightsPath(m.id), { state: { from: fromUrl } });
                     }}
                     className="gap-1"
                 >
@@ -539,7 +543,9 @@ function FilteredTable({ employees, records, navigate, deptLabel, startMs, endMs
                 <DataTable
                     columns={columns}
                     data={paginatedEmployees}
-                    onRowClick={(m) => navigate(getEmployeeProfilePath(m.id))}
+                    onRowClick={(m) =>
+                        navigate(getEmployeeProfilePath(m.id), { state: { from: fromUrl } })
+                    }
                     emptyMessage="لا توجد نتائج"
                     sortState={sortState}
                     onSort={handleSort}

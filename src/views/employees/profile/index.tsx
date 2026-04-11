@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
-import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { useParams, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import {
     ArrowLeft,
     ClipboardList,
@@ -21,7 +21,7 @@ import {
     DialogDescription,
 } from "@/ui";
 import { useSettings, useDeferredLoad, usePageTitle } from "@/hooks";
-import { getEmployeeInsightsPath } from "@/data";
+import { routesData, getEmployeeInsightsPath } from "@/data";
 import { seedDepartmentRecords, seedEmployees, seedEmployeeCvs } from "@/data/seed";
 import { getTenureInfo } from "@/utils";
 import { CvContent } from "./cv-content";
@@ -470,12 +470,18 @@ function ViewModeSelector({ mode, onChange, availableModes }: { mode: ViewMode; 
 export function EmployeeProfileView() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const location = useLocation();
     const [searchParams, setSearchParams] = useSearchParams();
     const { formatDate } = useSettings();
     const isReady = useDeferredLoad(150);
     usePageTitle("ملف الموظف");
 
     const [cvOpen, setCvOpen] = useState(false);
+
+    // Where to return when "العودة" is clicked. Falls back to the HR perf list.
+    const fromList =
+        (location.state as { from?: string } | null)?.from
+        ?? routesData.departmentHrPerformance;
 
     const employees = seedEmployees;
     const allRecords = seedDepartmentRecords;
@@ -781,7 +787,9 @@ export function EmployeeProfileView() {
                         )}
                         <Button
                             onClick={() =>
-                                navigate(getEmployeeInsightsPath(employee.id), { state: { from: "profile" } })
+                                navigate(getEmployeeInsightsPath(employee.id), {
+                                    state: { from: fromList },
+                                })
                             }
                             className="gap-2"
                         >
@@ -790,11 +798,11 @@ export function EmployeeProfileView() {
                         </Button>
                         <Button
                             variant="outline"
-                            onClick={() => navigate(-1)}
+                            onClick={() => navigate(fromList)}
                             className="gap-2"
                         >
                             <ArrowLeft className="h-4 w-4" />
-                            العودة
+                            العودة للقائمة
                         </Button>
                     </div>
                 }

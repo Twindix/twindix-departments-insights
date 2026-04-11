@@ -1,6 +1,6 @@
 import { useCallback, useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useLocation, useSearchParams } from "react-router-dom";
-import { ArrowLeft, User, Target, Award, BarChart3, FileText, BookOpen, Star } from "lucide-react";
+import { User, Target, Award, BarChart3, FileText, BookOpen, Star } from "lucide-react";
 import { Header, ScoreGauge, ProgressBar, EmployeeInsightsSkeleton } from "@/components/shared";
 import { Button, Card, CardHeader, CardTitle, CardContent, Badge } from "@/atoms";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/ui";
@@ -39,8 +39,8 @@ export function EmployeeInsightsView() {
         return () => clearTimeout(tabTimer.current);
     }, [tab]);
 
-    // Check if we came from the employee's profile page
-    const cameFromProfile = (location.state as { from?: string } | null)?.from === "profile";
+    // The original list URL we came from (preserved through profile → insights)
+    const fromList = (location.state as { from?: string } | null)?.from;
 
     if (!isReady) return <EmployeeInsightsSkeleton />;
 
@@ -107,23 +107,19 @@ export function EmployeeInsightsView() {
                 description={`${employee.role} | ${employee.subDepartmentName} | ${insights.evaluationPeriod}`}
                 actions={
                     <div className="flex items-center gap-2">
-                        {!cameFromProfile && id && (
+                        {id && (
                             <Button
-                                onClick={() => navigate(getEmployeeProfilePath(id))}
+                                onClick={() =>
+                                    navigate(getEmployeeProfilePath(id), {
+                                        state: fromList ? { from: fromList } : undefined,
+                                    })
+                                }
                                 className="gap-2"
                             >
                                 <User className="h-4 w-4" />
                                 ملف الموظف
                             </Button>
                         )}
-                        <Button
-                            variant="outline"
-                            onClick={() => navigate(-1)}
-                            className="gap-2"
-                        >
-                            <ArrowLeft className="h-4 w-4" />
-                            العودة
-                        </Button>
                     </div>
                 }
             />

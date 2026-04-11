@@ -9,14 +9,14 @@ export const routesData = {
     departmentProjectQuality: "/departments/projects/:id/quality",
     departmentProjectTime: "/departments/projects/:id/time",
     departmentFinance: "/departments/finance",
-    employeeProfile: "/employees/:id/profile",
+    employeeProfile: "/employees/:id",
     employeeInsights: "/employees/:id/insights",
     settings: "/settings",
     profile: "/profile",
 } as const;
 
 export function getEmployeeProfilePath(id: string): string {
-    return `/employees/${id}/profile`;
+    return `/employees/${id}`;
 }
 
 export function getEmployeeInsightsPath(id: string): string {

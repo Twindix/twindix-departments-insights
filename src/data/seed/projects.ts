@@ -152,7 +152,7 @@ function generateProjects(): ProjectInterface[] {
             );
 
             projects.push({
-                id: `proj-${projectId}`,
+                id: String(projectId),
                 name,
                 description,
                 longDescription,

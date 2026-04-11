@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, FolderKanban } from "lucide-react";
 import { Header, ProgressBar, EmptyState } from "@/components/shared";
 import { Button, Card, CardContent } from "@/atoms";
@@ -17,10 +17,17 @@ import { ProjectDetailSkeleton } from "./skeleton";
 
 export function ProjectDetailView() {
     const navigate = useNavigate();
+    const location = useLocation();
     const { id } = useParams();
     const isReady = useDeferredLoad(200);
 
     const project = useMemo(() => seedProjects.find((p) => p.id === id), [id]);
+    // The original list URL we came from (preserved through indicator drill-downs)
+    const fromList =
+        (location.state as { from?: string } | null)?.from
+        ?? routesData.departmentProjects;
+    // Forward state to indicator pages so their back chain still ends at the list
+    const navState = { from: fromList };
 
     usePageTitle(project ? project.name : "مشروع غير موجود");
 
@@ -62,11 +69,11 @@ export function ProjectDetailView() {
                 actions={
                     <Button
                         variant="outline"
-                        onClick={() => navigate(-1)}
+                        onClick={() => navigate(fromList)}
                         className="gap-2"
                     >
                         <ArrowLeft className="h-4 w-4" />
-                        العودة
+                        العودة للمشاريع
                     </Button>
                 }
             />
@@ -78,17 +85,17 @@ export function ProjectDetailView() {
                 <IndicatorCard
                     variant="cost"
                     value={project.cost}
-                    onClick={() => navigate(getProjectCostPath(project.id))}
+                    onClick={() => navigate(getProjectCostPath(project.id), { state: navState })}
                 />
                 <IndicatorCard
                     variant="time"
                     value={project.time}
-                    onClick={() => navigate(getProjectTimePath(project.id))}
+                    onClick={() => navigate(getProjectTimePath(project.id), { state: navState })}
                 />
                 <IndicatorCard
                     variant="quality"
                     value={project.quality}
-                    onClick={() => navigate(getProjectQualityPath(project.id))}
+                    onClick={() => navigate(getProjectQualityPath(project.id), { state: navState })}
                 />
             </div>
 

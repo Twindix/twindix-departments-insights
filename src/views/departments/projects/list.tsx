@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
     ArrowLeft,
     ArrowUpDown,
@@ -118,6 +118,7 @@ function getSortValue(project: ProjectInterface, key: string): number {
 
 export function ProjectsView() {
     const navigate = useNavigate();
+    const location = useLocation();
     const [searchParams, setSearchParams] = useSearchParams();
     const isReady = useDeferredLoad(200);
     usePageTitle("إدارة المشروعات");
@@ -560,7 +561,11 @@ export function ProjectsView() {
                         <Card
                             key={project.id}
                             className="relative cursor-pointer transition-all duration-200 hover:scale-[1.02] hover:border-[var(--color-primary)]/40 hover:shadow-md"
-                            onClick={() => navigate(getProjectDetailPath(project.id))}
+                            onClick={() =>
+                                navigate(getProjectDetailPath(project.id), {
+                                    state: { from: location.pathname + location.search },
+                                })
+                            }
                         >
                             <CardHeader className="pb-2">
                                 <CardTitle className="text-base">

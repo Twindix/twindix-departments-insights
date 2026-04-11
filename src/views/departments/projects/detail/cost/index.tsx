@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ArrowLeft, FolderKanban } from "lucide-react";
 import { Header, EmptyState } from "@/components/shared";
 import { Button } from "@/atoms";
@@ -54,12 +54,16 @@ const TAB_LABELS: Record<TabValue, string> = {
 
 export function ProjectCostView() {
     const navigate = useNavigate();
+    const location = useLocation();
     const { id } = useParams();
     const [searchParams, setSearchParams] = useSearchParams();
     const isReady = useDeferredLoad(200);
 
     const project = useMemo(() => seedProjects.find((p) => p.id === id), [id]);
     const costData = useMemo(() => (project ? getProjectCostData(project) : null), [project]);
+
+    // Preserve the original list URL through the project → indicator chain
+    const fromList = (location.state as { from?: string } | null)?.from;
 
     usePageTitle(project ? `مؤشر التكلفة — ${project.name}` : "مؤشر التكلفة");
 
@@ -111,7 +115,11 @@ export function ProjectCostView() {
                 actions={
                     <Button
                         variant="outline"
-                        onClick={() => navigate(getProjectDetailPath(project.id))}
+                        onClick={() =>
+                            navigate(getProjectDetailPath(project.id), {
+                                state: fromList ? { from: fromList } : undefined,
+                            })
+                        }
                         className="gap-2"
                     >
                         <ArrowLeft className="h-4 w-4" />

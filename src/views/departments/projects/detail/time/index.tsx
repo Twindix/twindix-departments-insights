@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ArrowLeft, FolderKanban } from "lucide-react";
 import { Header, EmptyState } from "@/components/shared";
 import { Button } from "@/atoms";
@@ -31,12 +31,15 @@ const TAB_URL_PREFIXES = ["ms", "ph", "g"];
 
 export function ProjectTimeView() {
     const navigate = useNavigate();
+    const location = useLocation();
     const { id } = useParams();
     const [searchParams, setSearchParams] = useSearchParams();
     const isReady = useDeferredLoad(200);
 
     const project = useMemo(() => seedProjects.find((p) => p.id === id), [id]);
     const timelineData = useMemo(() => (project ? getProjectTimelineData(project) : null), [project]);
+
+    const fromList = (location.state as { from?: string } | null)?.from;
 
     usePageTitle(project ? `مؤشر الوقت — ${project.name}` : "مؤشر الوقت");
 
@@ -93,7 +96,11 @@ export function ProjectTimeView() {
                 actions={
                     <Button
                         variant="outline"
-                        onClick={() => navigate(getProjectDetailPath(project.id))}
+                        onClick={() =>
+                            navigate(getProjectDetailPath(project.id), {
+                                state: fromList ? { from: fromList } : undefined,
+                            })
+                        }
                         className="gap-2"
                     >
                         <ArrowLeft className="h-4 w-4" />
