@@ -478,14 +478,15 @@ export function EmployeeProfileView() {
 
     const [cvOpen, setCvOpen] = useState(false);
 
-    // The HR performance management list is the canonical "list" the profile
-    // page belongs to. Back button always goes there regardless of how the
-    // user got here, so explore chains never bounce mid-flow.
-    const backToList = routesData.departmentHrPerformance;
-    // Preserve the original list URL (with filters / page) when forwarding to
-    // the insights sub-page so its own profile-back chain still works.
-    const forwardListState =
-        (location.state as { from?: string } | null)?.from ?? backToList;
+    // The full URL of the HR perf list we came from (with filters / page).
+    // Falls back to the bare URL if we landed on the profile directly.
+    const fromList =
+        (location.state as { from?: string } | null)?.from
+        ?? routesData.departmentHrPerformance;
+    // The profile's own current URL (with date range / tab params) — passed
+    // forward to the insights page so insights → back lands on the exact
+    // same profile state instead of resetting filters.
+    const profileFullUrl = location.pathname + location.search;
 
     const employees = seedEmployees;
     const allRecords = seedDepartmentRecords;
@@ -793,7 +794,7 @@ export function EmployeeProfileView() {
                             variant="outline"
                             onClick={() =>
                                 navigate(getEmployeeInsightsPath(employee.id), {
-                                    state: { from: forwardListState },
+                                    state: { from: fromList, parent: profileFullUrl },
                                 })
                             }
                             className="gap-2"
@@ -803,7 +804,7 @@ export function EmployeeProfileView() {
                         </Button>
                         <Button
                             variant="outline"
-                            onClick={() => navigate(backToList)}
+                            onClick={() => navigate(fromList)}
                             className="gap-2"
                         >
                             <ArrowLeft className="h-4 w-4" />

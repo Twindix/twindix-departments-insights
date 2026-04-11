@@ -39,8 +39,13 @@ export function EmployeeInsightsView() {
         return () => clearTimeout(tabTimer.current);
     }, [tab]);
 
-    // The original list URL we came from (preserved through profile → insights)
+    // The original list URL (HR perf with filters) — preserved so the
+    // restored profile can chain its own back button to it.
     const fromList = (location.state as { from?: string } | null)?.from;
+    // The profile URL we came from (with its date range / tab params).
+    // Used so back-from-insights restores the exact profile state.
+    const profileParent =
+        (location.state as { parent?: string } | null)?.parent;
 
     if (!isReady) return <EmployeeInsightsSkeleton />;
 
@@ -111,7 +116,7 @@ export function EmployeeInsightsView() {
                             <Button
                                 variant="outline"
                                 onClick={() =>
-                                    navigate(getEmployeeProfilePath(id), {
+                                    navigate(profileParent ?? getEmployeeProfilePath(id), {
                                         state: fromList ? { from: fromList } : undefined,
                                     })
                                 }
