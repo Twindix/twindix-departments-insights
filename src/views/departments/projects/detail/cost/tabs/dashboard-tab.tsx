@@ -25,7 +25,6 @@ export function DashboardTab({ data }: DashboardTabProps) {
                     label="إجمالي الإيرادات التعاقدية"
                     value={formatUsdAsSar(d.contractedRevenue, { compact: true })}
                     icon={<DollarSign className="h-4 w-4" />}
-                    tone="info"
                 />
                 <KpiTile
                     label="الميزانية الأصلية"
@@ -37,14 +36,12 @@ export function DashboardTab({ data }: DashboardTabProps) {
                     value={formatUsdAsSar(d.eac, { compact: true })}
                     sublabel={`انحراف ${formatUsdAsSar(d.eac - d.originalBudget, { compact: true })}`}
                     icon={<AlertTriangle className="h-4 w-4" />}
-                    tone={d.eac > d.originalBudget * 1.05 ? "warning" : "neutral"}
                 />
                 <KpiTile
                     label="الربح المتوقع النهائي"
                     value={formatUsdAsSar(d.expectedFinalProfit, { compact: true })}
                     sublabel={`هامش ${formatPercentage(d.expectedMargin)}`}
                     icon={<TrendingUp className="h-4 w-4" />}
-                    tone={d.expectedMargin >= 0.20 ? "success" : "warning"}
                 />
                 <KpiTile
                     label="الصرف الفعلي حتى تاريخه"
@@ -60,14 +57,12 @@ export function DashboardTab({ data }: DashboardTabProps) {
                     label="نسبة الإنجاز الحالية"
                     value={formatPercentage(d.completionPct)}
                     icon={<Layers className="h-4 w-4" />}
-                    tone="info"
                 />
                 <KpiTile
                     label="نسبة الهدر الفعلية"
                     value={formatPercentage(d.actualWastePct)}
                     sublabel={`تكلفة إعادة العمل ${formatUsdAsSar(d.reworkCost, { compact: true })}`}
                     icon={<AlertTriangle className="h-4 w-4" />}
-                    tone={d.actualWastePct <= 0.025 ? "success" : d.actualWastePct <= 0.04 ? "warning" : "error"}
                 />
             </div>
 

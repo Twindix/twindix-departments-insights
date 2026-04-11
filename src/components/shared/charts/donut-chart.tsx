@@ -115,33 +115,46 @@ export function DonutChart({
                         />
                     );
                 })}
+                {/* Center hole background — punches the donut visually so text never touches the ring */}
+                {(centerLabel || centerValue) && rInner > 0 && (
+                    <circle
+                        cx={cx}
+                        cy={cy}
+                        r={rInner - 2}
+                        fill="var(--color-bg)"
+                    />
+                )}
                 {(centerLabel || centerValue) && (
-                    <g>
-                        {centerValue && (
-                            <text
-                                x={cx}
-                                y={centerLabel ? cy - 2 : cy + 6}
-                                textAnchor="middle"
-                                fontSize={20}
-                                fontWeight={700}
-                                fill="var(--color-text-primary)"
-                                className="tabular-nums"
-                            >
-                                {centerValue}
-                            </text>
-                        )}
-                        {centerLabel && (
-                            <text
-                                x={cx}
-                                y={cy + 16}
-                                textAnchor="middle"
-                                fontSize={11}
-                                fill="var(--color-text-muted)"
-                            >
-                                {centerLabel}
-                            </text>
-                        )}
-                    </g>
+                    <foreignObject
+                        x={cx - rInner + 4}
+                        y={cy - rInner + 4}
+                        width={(rInner - 4) * 2}
+                        height={(rInner - 4) * 2}
+                    >
+                        <div className="flex h-full w-full flex-col items-center justify-center gap-0.5 px-1 text-center">
+                            {centerValue && (
+                                <span
+                                    className="font-bold tabular-nums leading-tight text-[var(--color-text-primary)]"
+                                    style={{
+                                        // Auto-shrink based on inner diameter and text length
+                                        fontSize: `${Math.max(10, Math.min(20, ((rInner - 4) * 2) / Math.max(centerValue.length * 0.55, 4)))}px`,
+                                    }}
+                                >
+                                    {centerValue}
+                                </span>
+                            )}
+                            {centerLabel && (
+                                <span
+                                    className="leading-tight text-[var(--color-text-muted)]"
+                                    style={{
+                                        fontSize: `${Math.max(8, Math.min(11, ((rInner - 4) * 2) / Math.max(centerLabel.length * 0.55, 8)))}px`,
+                                    }}
+                                >
+                                    {centerLabel}
+                                </span>
+                            )}
+                        </div>
+                    </foreignObject>
                 )}
             </svg>
 

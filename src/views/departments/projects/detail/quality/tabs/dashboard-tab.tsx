@@ -19,7 +19,6 @@ export function QualityDashboardTab({ data }: QualityDashboardTabProps) {
                     label="إجمالي الوحدات"
                     value={formatNumber(d.totalUnits)}
                     icon={<Layers className="h-4 w-4" />}
-                    tone="info"
                 />
                 <KpiTile
                     label="متوسط الإنجاز الكلي"
@@ -31,32 +30,27 @@ export function QualityDashboardTab({ data }: QualityDashboardTabProps) {
                     value={formatPercentage(d.qualityIndex)}
                     sublabel="ناتج الأوزان المحققة"
                     icon={<ShieldCheck className="h-4 w-4" />}
-                    tone={d.qualityIndex >= 0.9 ? "success" : d.qualityIndex >= 0.75 ? "info" : "warning"}
                 />
                 <KpiTile
                     label="القبول من أول مرة"
                     value={formatPercentage(d.firstTimeAcceptance)}
                     icon={<CheckCircle2 className="h-4 w-4" />}
-                    tone={d.firstTimeAcceptance >= 0.9 ? "success" : d.firstTimeAcceptance >= 0.8 ? "info" : "warning"}
                 />
                 <KpiTile
                     label="نسبة إغلاق العيوب"
                     value={formatPercentage(d.defectClosureRate)}
                     icon={<FileCheck className="h-4 w-4" />}
-                    tone={d.defectClosureRate >= 0.9 ? "success" : d.defectClosureRate >= 0.75 ? "info" : "warning"}
                 />
                 <KpiTile
                     label="العيوب المفتوحة"
                     value={formatNumber(d.openDefects)}
                     sublabel={`مغلق: ${formatNumber(d.closedDefects)}`}
                     icon={<XCircle className="h-4 w-4" />}
-                    tone={d.openDefects > d.totalUnits ? "warning" : "neutral"}
                 />
                 <KpiTile
                     label="تكلفة إعادة العمل"
                     value={formatUsdAsSar(d.totalReworkCostUsd, { compact: true })}
                     icon={<Wrench className="h-4 w-4" />}
-                    tone="warning"
                 />
                 <KpiTile
                     label="متوسط الفحوصات / وحدة"

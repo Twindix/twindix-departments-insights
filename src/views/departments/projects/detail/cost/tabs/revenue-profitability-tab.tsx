@@ -30,7 +30,6 @@ export function RevenueProfitabilityTab({ data }: RevenueProfitabilityTabProps) 
                 <KpiTile
                     label="إجمالي الإيرادات التعاقدية"
                     value={formatUsdAsSar(p.contractedRevenue, { compact: true })}
-                    tone="info"
                 />
                 <KpiTile
                     label="الميزانية الأصلية"
@@ -51,7 +50,6 @@ export function RevenueProfitabilityTab({ data }: RevenueProfitabilityTabProps) 
                 <KpiTile
                     label="الربح المحقق حتى تاريخه"
                     value={formatUsdAsSar(p.realizedProfit, { compact: true })}
-                    tone={p.realizedProfit > 0 ? "success" : "warning"}
                 />
                 <KpiTile
                     label="التكلفة المتوقعة عند الإنجاز"
@@ -60,12 +58,10 @@ export function RevenueProfitabilityTab({ data }: RevenueProfitabilityTabProps) 
                 <KpiTile
                     label="الربح المتوقع النهائي"
                     value={formatUsdAsSar(p.expectedFinalProfit, { compact: true })}
-                    tone="success"
                 />
                 <KpiTile
                     label="هامش الربح المتوقع"
                     value={formatPercentage(p.expectedMargin)}
-                    tone={p.expectedMargin >= 0.20 ? "success" : "warning"}
                 />
             </div>
 

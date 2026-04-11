@@ -41,14 +41,12 @@ export function TimeOverviewTab({ data }: OverviewTabProps) {
                     label="إجمالي الوحدات"
                     value={s.totalUnits.toLocaleString("ar-EG")}
                     icon={<Layers className="h-4 w-4" />}
-                    tone="info"
                 />
                 <KpiTile
                     label="مكتملة"
                     value={s.completedUnits.toLocaleString("ar-EG")}
                     sublabel={`${formatPercentage(s.completedUnits / s.totalUnits)}`}
                     icon={<Flag className="h-4 w-4" />}
-                    tone="success"
                 />
                 <KpiTile
                     label="تحت التنفيذ"
@@ -79,7 +77,6 @@ export function TimeOverviewTab({ data }: OverviewTabProps) {
                     label="متوسط التأخير الحالي"
                     value={`${s.avgCurrentDelayDays.toLocaleString("ar-EG")} يوم`}
                     icon={<TrendingUp className="h-4 w-4" />}
-                    tone={s.avgCurrentDelayDays > 15 ? "warning" : s.avgCurrentDelayDays > 5 ? "neutral" : "success"}
                 />
             </div>
 
