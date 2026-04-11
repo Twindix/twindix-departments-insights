@@ -1,5 +1,6 @@
 import type { ProjectInterface } from "@/interfaces";
 import { hashStringSeed, seededRandom } from "./prng";
+import { project1QualityData } from "./project-1-quality-data";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -282,6 +283,8 @@ const RISK_RESPONSES = [
 const cache = new Map<string, QualityData>();
 
 export function getProjectQualityData(project: ProjectInterface): QualityData {
+    if (project.id === "1") return project1QualityData;
+
     const cached = cache.get(project.id);
     if (cached) return cached;
     const data = generateQualityData(project);

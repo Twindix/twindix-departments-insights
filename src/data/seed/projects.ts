@@ -176,8 +176,43 @@ function generateProjects(): ProjectInterface[] {
         }
     }
 
-    // Sort by avgPerformance descending (default surface order)
+    // Override project "1" with the real 120-villa compound from the Excel
+    // source files. The numbers are calibrated against the Cost / Quality /
+    // Timeline workbooks so the customer-facing demo reflects actual data.
+    projects[0] = {
+        id: "1",
+        name: "مجمع الفيصل السكني — 120 فيلا",
+        description: "مشروع مجمع سكني متكامل يضم 120 فيلا بثلاثة طرز معمارية، يشمل المرافق الترفيهية والخدمية الكاملة.",
+        longDescription:
+            "مشروع تنفيذ مجمع سكني فاخر يضم 120 فيلا موزعة على أربعة قطاعات (أ، ب، ج، د) بثلاثة نماذج معمارية مختلفة بمساحات تبدأ من 380 م² حتى 460 م². يتضمن المشروع شبكة طرق داخلية، مسطحات خضراء واسعة، نادٍ صحي مجهز، حمامات سباحة، ملاعب رياضية، مسجد، ومنطقة تجارية صغيرة لخدمة السكان. بدأ التنفيذ في يناير 2025 ومن المخطط إقفال المشروع بالكامل بنهاية أغسطس 2027 على دفعات تنفيذية متتابعة. يُدار المشروع بالشراكة مع أربعة مقاولين رئيسيين متخصصين في الأعمال الإنشائية والمعمارية والكهروميكانيكية والخارجية.",
+        type: "villas-compound",
+        unitType: "فيلا",
+        unitCount: 120,
+        location: "الرياض",
+        startDate: "2025-01-05",
+        plannedEndDate: "2027-01-05",
+        currentEndDate: "2027-08-28",
+        status: "in-progress",
+        contractorCount: 4,
+        // Scores derived from the Excel files:
+        //   cost score 91% — variance ~1.83%, expected margin 25.32%
+        //   time score 85% — avg delay 6.2 days, 65% complete
+        //   quality score 96% — quality index 0.965
+        cost: 91,
+        time: 85,
+        quality: 96,
+        avgPerformance: 91,
+        isAccessible: true,
+    };
+
+    // Sort by avgPerformance descending, then pin project "1" to the top so
+    // the real-data showcase project is always the first card on the list.
     projects.sort((a, b) => b.avgPerformance - a.avgPerformance);
+    const pinIdx = projects.findIndex((p) => p.id === "1");
+    if (pinIdx > 0) {
+        const [pinned] = projects.splice(pinIdx, 1);
+        projects.unshift(pinned);
+    }
 
     return projects;
 }
