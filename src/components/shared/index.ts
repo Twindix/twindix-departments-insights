@@ -12,6 +12,7 @@ export { Topbar } from "./topbar";
 export { DepartmentCircle } from "./department-circle";
 export { DataTable } from "./data-table";
 export type { SortDirection, SortState } from "./data-table";
+export { TablePagination } from "./table-pagination";
 export { StatusBadge } from "./status-badge";
 export { DatePicker } from "./date-picker";
 export {

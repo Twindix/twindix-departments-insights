@@ -13,6 +13,7 @@ import {
     ProjectPlaceholderView,
     ProjectDetailView,
     ProjectCostView,
+    ProjectQualityView,
     FinanceView,
     EmployeeProfileView,
     EmployeeInsightsView,
@@ -75,7 +76,7 @@ export const router = createBrowserRouter([
                     },
                     {
                         path: routesData.departmentProjectQuality,
-                        element: <ProjectPlaceholderView section="quality" />,
+                        element: <ProjectQualityView />,
                         errorElement: <RouteError />,
                     },
                     {

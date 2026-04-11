@@ -7,4 +7,5 @@ export {
     useSettings,
     useDeferredLoad,
     usePageTitle,
+    useTableUrlState,
 } from "./shared";
