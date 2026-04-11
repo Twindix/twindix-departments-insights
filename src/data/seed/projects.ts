@@ -1,211 +1,185 @@
-export interface ProjectInterface {
-    id: string;
-    name: string;
-    description: string;
-    cost: number;
-    time: number;
-    quality: number;
-    avgPerformance: number;
-    isAccessible: boolean;
-}
+import type { ProjectInterface, ProjectStatus, ProjectType } from "@/interfaces";
+import { seededRandom } from "./prng";
+import {
+    PROJECT_TYPE_META,
+    PROJECT_NAMES_BY_TYPE,
+    SAUDI_LOCATIONS,
+} from "./project-names";
 
-// Deterministic pseudo-random number generator (mulberry32)
-function seededRandom(seed: number): () => number {
-    let s = seed;
-    return () => {
-        s |= 0;
-        s = (s + 0x6d2b79f5) | 0;
-        let t = Math.imul(s ^ (s >>> 15), 1 | s);
-        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-    };
-}
+// Re-export the type so existing imports from "@/data/seed" keep working.
+export type { ProjectInterface } from "@/interfaces";
 
-// ── Arabic project name pools ──────────────────────────────────────────────
+// ── Distribution config ────────────────────────────────────────────────────
+//
+// 100 projects total, distributed across 8 real-estate types.
+// The score distribution targets a realistic ~65% average with wide variance:
+//   ~15% excellent  (cost/time/quality 80-95)
+//   ~30% good       (65-82)
+//   ~35% average    (50-68)
+//   ~15% weak       (35-55)
+//   ~5%  critical   (22-42)
+// This produces a much more diverse and realistic dashboard than the previous
+// uniform 82% bias.
 
-const PROJECT_BASE_NAMES = [
-    "مشروع التحول الرقمي",
-    "مشروع تطوير البنية التحتية",
-    "مشروع إدارة الجودة الشاملة",
-    "مشروع تدريب الكوادر البشرية",
-    "مشروع التوسع الإقليمي",
-    "مشروع تطوير خدمة العملاء",
-    "مشروع الأمن السيبراني",
-    "مشروع التخطيط الاستراتيجي",
-    "مشروع أتمتة العمليات",
-    "مشروع إعادة هيكلة سلسلة التوريد",
-    "مشروع تطوير تطبيق الجوال",
-    "مشروع نظام المحاسبة المتقدم",
-    "مشروع تحسين بيئة العمل",
-    "مشروع إدارة المخاطر",
-    "مشروع الذكاء الاصطناعي",
-    "مشروع التسويق الرقمي",
-    "مشروع الحوكمة المؤسسية",
-    "مشروع تطوير الأعمال",
-    "مشروع إدارة المعرفة",
-    "مشروع الاستدامة البيئية",
+const TYPE_DISTRIBUTION: { type: ProjectType; count: number }[] = [
+    { type: "villas-compound", count: 25 },
+    { type: "residential-tower", count: 15 },
+    { type: "houses", count: 12 },
+    { type: "housing-compound", count: 12 },
+    { type: "school", count: 12 },
+    { type: "factory", count: 10 },
+    { type: "mall", count: 10 },
+    { type: "hospital", count: 4 },
 ];
 
-const PROJECT_DESCRIPTIONS = [
-    "تحويل العمليات الورقية إلى أنظمة رقمية متكاملة لتحسين الكفاءة وتقليل الأخطاء البشرية.",
-    "تحديث وتطوير البنية التحتية التقنية للشركة بما يشمل الشبكات والخوادم وأنظمة الأمان.",
-    "تطبيق معايير الجودة الشاملة في جميع الأقسام لتحقيق أعلى مستويات الرضا للعملاء.",
-    "برنامج تدريبي متكامل لرفع كفاءة الموظفين وتطوير مهاراتهم المهنية والقيادية.",
-    "فتح فروع جديدة في المناطق الرئيسية لتوسيع نطاق خدمات الشركة وزيادة الحصة السوقية.",
-    "إعادة هيكلة مركز خدمة العملاء وتبني أدوات ذكاء اصطناعي لتسريع الاستجابة.",
-    "تعزيز منظومة الأمن السيبراني وحماية البيانات الحساسة من التهديدات الإلكترونية.",
-    "وضع خطة استراتيجية خمسية شاملة تتضمن أهداف النمو والتطوير المؤسسي.",
-    "أتمتة العمليات التشغيلية المتكررة باستخدام تقنيات الروبوتات البرمجية لتقليل التكاليف.",
-    "تحسين سلسلة التوريد وتقليل فترات التسليم من خلال شراكات لوجستية جديدة.",
-    "بناء تطبيق جوال متكامل للعملاء يتيح إدارة الحساب والطلبات والدعم الفني.",
-    "استبدال النظام المحاسبي القديم بنظام سحابي حديث يدعم التقارير الآنية والتكامل مع الأنظمة الأخرى.",
-    "تطوير بيئة العمل المادية والمعنوية لرفع مستوى رضا الموظفين وزيادة الإنتاجية.",
-    "بناء إطار عمل متكامل لإدارة المخاطر المؤسسية والتشغيلية والمالية.",
-    "تطبيق حلول الذكاء الاصطناعي في العمليات التشغيلية لتعزيز اتخاذ القرارات المبنية على البيانات.",
-];
+type Tier = "excellent" | "good" | "average" | "weak" | "critical";
 
-// ── Generate 100 projects with avg performance = 68 ────────────────────────
+const TIER_RANGES: Record<Tier, { cost: [number, number]; time: [number, number]; quality: [number, number] }> = {
+    excellent: { cost: [80, 95], time: [78, 94], quality: [82, 96] },
+    good: { cost: [65, 82], time: [62, 80], quality: [68, 84] },
+    average: { cost: [50, 68], time: [46, 66], quality: [52, 70] },
+    weak: { cost: [35, 55], time: [32, 52], quality: [40, 58] },
+    critical: { cost: [22, 42], time: [20, 38], quality: [28, 45] },
+};
+
+function pickTier(r: number): Tier {
+    if (r < 0.15) return "excellent";
+    if (r < 0.45) return "good";
+    if (r < 0.80) return "average";
+    if (r < 0.95) return "weak";
+    return "critical";
+}
+
+// Today reference for status calculation. Matches the project's "current date"
+// convention used elsewhere (CLAUDE.md sets the simulated current date).
+const TODAY_REF = new Date("2026-04-10");
+
+function isoDate(d: Date): string {
+    return d.toISOString().split("T")[0];
+}
+
+function addDays(base: Date, days: number): Date {
+    const out = new Date(base);
+    out.setDate(out.getDate() + days);
+    return out;
+}
+
+function deriveStatus(
+    today: Date,
+    startDate: Date,
+    plannedEnd: Date,
+    currentEnd: Date,
+    delayDays: number,
+): ProjectStatus {
+    if (today >= currentEnd) return "completed";
+    if (today < addDays(startDate, 90)) return "early-stage";
+    if (delayDays > 30 || today > plannedEnd) return "delayed";
+    return "in-progress";
+}
+
+// ── Generator ──────────────────────────────────────────────────────────────
 
 function generateProjects(): ProjectInterface[] {
     const rand = seededRandom(42);
-    const TARGET_AVG = 82;
-    const TOTAL_COUNT = 100;
-    const TARGET_SUM = TARGET_AVG * TOTAL_COUNT; // 6800
 
-    // Helper to generate a random int in [min, max]
-    function randInt(min: number, max: number): number {
-        return Math.floor(rand() * (max - min + 1)) + min;
-    }
-
-    // Helper to clamp
-    function clamp(v: number, min: number, max: number): number {
-        return Math.max(min, Math.min(max, v));
-    }
-
-    // Generate project names with variation suffixes
-    const SUFFIXES = [
-        "", " - المرحلة الأولى", " - المرحلة الثانية", " - المرحلة الثالثة",
-        " (تحديث)", " (توسعة)", " (تطوير)", " (إعادة هيكلة)",
-    ];
+    const randInt = (min: number, max: number): number =>
+        Math.floor(rand() * (max - min + 1)) + min;
 
     const projects: ProjectInterface[] = [];
-    const usedNames = new Set<string>();
+    let projectId = 1;
 
-    // Generate 99 projects first, then adjust #100
-    for (let i = 0; i < TOTAL_COUNT; i++) {
-        // Determine performance tier for distribution:
-        // ~75 high (65-95%), ~17 mixed (45-65%), ~8 low (30-44%)
-        const tierRoll = rand();
-        let cost: number, time: number, quality: number;
+    for (const { type, count } of TYPE_DISTRIBUTION) {
+        const meta = PROJECT_TYPE_META[type];
+        const namePool = PROJECT_NAMES_BY_TYPE[type];
 
-        if (tierRoll < 0.75) {
-            // High tier (65-95%)
-            cost = randInt(65, 95);
-            time = randInt(60, 95);
-            quality = randInt(60, 95);
-        } else if (tierRoll < 0.92) {
-            // Mixed tier (45-65%)
-            cost = randInt(45, 70);
-            time = randInt(40, 68);
-            quality = randInt(42, 68);
-        } else {
-            // Low tier (<45%)
-            cost = randInt(30, 50);
-            time = randInt(25, 48);
-            quality = randInt(35, 48);
-        }
+        for (let j = 0; j < count; j++) {
+            // ── Score tier (consumes 4 rand() calls: 1 tier + 3 ints) ─────
+            const tier = pickTier(rand());
+            const ranges = TIER_RANGES[tier];
+            const cost = randInt(ranges.cost[0], ranges.cost[1]);
+            const time = randInt(ranges.time[0], ranges.time[1]);
+            const quality = randInt(ranges.quality[0], ranges.quality[1]);
+            const avgPerformance = Math.round((cost + time + quality) / 3);
 
-        // Generate a unique name
-        let projectName: string;
-        do {
-            const baseName = PROJECT_BASE_NAMES[Math.floor(rand() * PROJECT_BASE_NAMES.length)];
-            const suffix = SUFFIXES[Math.floor(rand() * SUFFIXES.length)];
-            projectName = baseName + suffix;
-        } while (usedNames.has(projectName));
-        usedNames.add(projectName);
+            // ── Name (cycles through pool, adds phase suffix on overflow) ─
+            const baseName = namePool[j % namePool.length];
+            const cycleIdx = Math.floor(j / namePool.length);
+            const suffix = cycleIdx === 0
+                ? ""
+                : cycleIdx === 1
+                    ? " - المرحلة الثانية"
+                    : ` - المرحلة ${cycleIdx + 1}`;
+            const name = baseName + suffix;
 
-        const description = PROJECT_DESCRIPTIONS[Math.floor(rand() * PROJECT_DESCRIPTIONS.length)];
-        const avgPerformance = Math.round((cost + time + quality) / 3);
+            // ── Description / longDescription (consumes 2 rand() calls) ──
+            const description =
+                meta.descriptions[Math.floor(rand() * meta.descriptions.length)];
+            const longDescription =
+                meta.longDescriptions[
+                    Math.floor(rand() * meta.longDescriptions.length)
+                ];
 
-        projects.push({
-            id: `proj-${i + 1}`,
-            name: projectName,
-            description,
-            cost,
-            time,
-            quality,
-            avgPerformance,
-            isAccessible: false,
-        });
-    }
+            // ── Location (1 rand() call) ──────────────────────────────────
+            const location = SAUDI_LOCATIONS[Math.floor(rand() * SAUDI_LOCATIONS.length)];
 
-    // Adjust the last project to hit the exact target sum of 6800
-    const sumWithout = projects.slice(0, TOTAL_COUNT - 1).reduce((s, p) => s + p.avgPerformance, 0);
-    const needed = TARGET_SUM - sumWithout;
+            // ── Unit count (1 rand() call) ────────────────────────────────
+            const [minUnits, maxUnits] = meta.unitCountRange;
+            const unitCount = randInt(minUnits, maxUnits);
 
-    // Find cost/time/quality values where Math.round((c+t+q)/3) === needed
-    // Start with even distribution, then nudge to get exact rounding
-    const base = clamp(needed, 30, 98);
-    let lastCost = base;
-    const lastTime = clamp(base, 25, 98);
-    let lastQuality = clamp(base, 35, 98);
+            // ── Contractor count (1 rand() call) ──────────────────────────
+            const contractorCount = randInt(2, 6);
 
-    // Adjust to hit the exact avgPerformance
-    // Math.round((c+t+q)/3) = needed  ⟹  needed*3 - 1 ≤ c+t+q ≤ needed*3 + 1
-    // We need the sum to be exactly needed*3 for clean rounding
-    const targetTriple = needed * 3;
-    const currentTriple = lastCost + lastTime + lastQuality;
-    const delta = targetTriple - currentTriple;
-    // Apply delta to cost (safe within clamp range since needed is 30-98)
-    lastCost = clamp(lastCost + delta, 30, 98);
+            // ── Dates (3 rand() calls) ────────────────────────────────────
+            const startDaysAgo = randInt(60, 900);
+            const startDate = addDays(TODAY_REF, -startDaysAgo);
+            const plannedDurationDays = randInt(540, 1080);
+            const plannedEndDate = addDays(startDate, plannedDurationDays);
+            // Delay correlates with low time score
+            const delayDays =
+                time >= 80 ? randInt(0, 10)
+                    : time >= 65 ? randInt(5, 30)
+                        : time >= 50 ? randInt(15, 60)
+                            : time >= 35 ? randInt(30, 110)
+                                : randInt(60, 180);
+            const currentEndDate = addDays(plannedEndDate, delayDays);
 
-    // Verify and fallback: if rounding still doesn't match, brute-force nudge
-    let lastAvg = Math.round((lastCost + lastTime + lastQuality) / 3);
-    if (lastAvg !== needed) {
-        // Try small adjustments to quality
-        for (let nudge = -3; nudge <= 3; nudge++) {
-            const q = clamp(lastQuality + nudge, 35, 98);
-            if (Math.round((lastCost + lastTime + q) / 3) === needed) {
-                lastQuality = q;
-                lastAvg = needed;
-                break;
-            }
-        }
-    }
+            const status = deriveStatus(
+                TODAY_REF,
+                startDate,
+                plannedEndDate,
+                currentEndDate,
+                delayDays,
+            );
 
-    projects[TOTAL_COUNT - 1] = {
-        ...projects[TOTAL_COUNT - 1],
-        cost: lastCost,
-        time: lastTime,
-        quality: lastQuality,
-        avgPerformance: lastAvg,
-    };
+            projects.push({
+                id: `proj-${projectId}`,
+                name,
+                description,
+                longDescription,
+                type,
+                unitType: meta.unitType,
+                unitCount,
+                location,
+                startDate: isoDate(startDate),
+                plannedEndDate: isoDate(plannedEndDate),
+                currentEndDate: isoDate(currentEndDate),
+                status,
+                contractorCount,
+                cost,
+                time,
+                quality,
+                avgPerformance,
+                isAccessible: true,
+            });
 
-    // Safety net: if still off due to edge rounding, scan all projects for one to nudge
-    const finalCheck = projects.reduce((s, p) => s + p.avgPerformance, 0);
-    if (finalCheck !== TARGET_SUM) {
-        const diff = TARGET_SUM - finalCheck;
-        for (let j = 0; j < TOTAL_COUNT - 1; j++) {
-            const p = projects[j];
-            for (let nudge = diff * 2; nudge <= diff * 4; nudge++) {
-                const nc = clamp(p.cost + nudge, 30, 98);
-                const na = Math.round((nc + p.time + p.quality) / 3);
-                if (na - p.avgPerformance === diff) {
-                    projects[j] = { ...p, cost: nc, avgPerformance: na };
-                    break;
-                }
-            }
-            // Re-check after potential fix
-            const recheck = projects.reduce((s2, p2) => s2 + p2.avgPerformance, 0);
-            if (recheck === TARGET_SUM) break;
+            projectId++;
         }
     }
 
-    // Sort by avgPerformance descending (default sort)
+    // Sort by avgPerformance descending (default surface order)
     projects.sort((a, b) => b.avgPerformance - a.avgPerformance);
 
     return projects;
 }
 
-// 100 projects — average of all avgPerformance values = 68 (matches dashboard overallPerformance)
 export const seedProjects: ProjectInterface[] = generateProjects();

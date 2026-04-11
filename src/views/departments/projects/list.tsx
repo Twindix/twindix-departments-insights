@@ -3,12 +3,12 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import {
     ArrowLeft,
     ArrowUpDown,
-    Lock,
-    LockOpen,
     FolderKanban,
     Filter,
     Search,
     X,
+    MapPin,
+    Building2,
     ChevronLeft,
     ChevronRight,
     ChevronsLeft,
@@ -24,14 +24,15 @@ import {
     SelectItem,
 } from "@/ui";
 import { useDeferredLoad, usePageTitle } from "@/hooks";
-import { routesData } from "@/data";
-import { seedProjects, type ProjectInterface } from "@/data/seed";
-import { toast } from "sonner";
+import { routesData, getProjectDetailPath } from "@/data";
+import { seedProjects, PROJECT_TYPE_META } from "@/data/seed";
+import type { ProjectInterface, ProjectType } from "@/interfaces";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
 type PerformanceFilter = "all" | "excellent" | "good" | "average" | "weak";
 type LevelFilter = "all" | "high" | "medium" | "low";
+type TypeFilter = "all" | ProjectType;
 
 // ── Filter labels ──────────────────────────────────────────────────────────
 
@@ -62,6 +63,18 @@ const QUALITY_FILTER_LABELS: Record<LevelFilter, string> = {
     high: "مرتفع (٨٠%+)",
     medium: "متوسط (٦٠-٧٩%)",
     low: "منخفض (أقل من ٦٠%)",
+};
+
+const TYPE_FILTER_LABELS: Record<TypeFilter, string> = {
+    all: "جميع الأنواع",
+    "villas-compound": PROJECT_TYPE_META["villas-compound"].typeLabel,
+    "residential-tower": PROJECT_TYPE_META["residential-tower"].typeLabel,
+    "houses": PROJECT_TYPE_META["houses"].typeLabel,
+    "housing-compound": PROJECT_TYPE_META["housing-compound"].typeLabel,
+    "school": PROJECT_TYPE_META["school"].typeLabel,
+    "factory": PROJECT_TYPE_META["factory"].typeLabel,
+    "mall": PROJECT_TYPE_META["mall"].typeLabel,
+    "hospital": PROJECT_TYPE_META["hospital"].typeLabel,
 };
 
 const SORT_LABELS: Record<string, string> = {
@@ -117,6 +130,7 @@ export function ProjectsView() {
     const costFilter = (searchParams.get("cost") || "all") as LevelFilter;
     const timeFilter = (searchParams.get("time") || "all") as LevelFilter;
     const qualityFilter = (searchParams.get("quality") || "all") as LevelFilter;
+    const typeFilter = (searchParams.get("type") || "all") as TypeFilter;
     const sortRaw = searchParams.get("sort") || "avg:desc";
     const currentPage = Number(searchParams.get("page")) || 1;
     const pageSize = Number(searchParams.get("limit")) || 12;
@@ -190,15 +204,17 @@ export function ProjectsView() {
 
     // Filter projects
     const filteredProjects = useMemo(() => {
+        const q = searchQuery.trim();
         return seedProjects.filter((p) => {
-            if (searchQuery.trim() && !p.name.includes(searchQuery.trim())) return false;
+            if (q && !p.name.includes(q) && !p.location.includes(q)) return false;
+            if (typeFilter !== "all" && p.type !== typeFilter) return false;
             if (!matchesPerformance(p.avgPerformance, perfFilter)) return false;
             if (!matchesLevel(p.cost, costFilter)) return false;
             if (!matchesLevel(p.time, timeFilter)) return false;
             if (!matchesLevel(p.quality, qualityFilter)) return false;
             return true;
         });
-    }, [searchQuery, perfFilter, costFilter, timeFilter, qualityFilter]);
+    }, [searchQuery, typeFilter, perfFilter, costFilter, timeFilter, qualityFilter]);
 
     // Sort projects
     const sortedProjects = useMemo(() => {
@@ -220,6 +236,7 @@ export function ProjectsView() {
 
     const hasActiveFilters =
         searchQuery ||
+        typeFilter !== "all" ||
         perfFilter !== "all" ||
         costFilter !== "all" ||
         timeFilter !== "all" ||
@@ -228,6 +245,7 @@ export function ProjectsView() {
     const clearFilters = () => {
         setSearchParams(
             (prev) => {
+                prev.delete("type");
                 prev.delete("perf");
                 prev.delete("cost");
                 prev.delete("time");
@@ -280,16 +298,6 @@ export function ProjectsView() {
                 }
             />
 
-            {/* Lock/Unlock Legend */}
-            <div className="flex items-center gap-4 text-xs text-[var(--color-text-muted)]">
-                <span className="flex items-center gap-1.5">
-                    <LockOpen className="h-3.5 w-3.5 text-emerald-500" /> متاح للعرض
-                </span>
-                <span className="flex items-center gap-1.5">
-                    <Lock className="h-3.5 w-3.5" /> يتطلب صلاحية
-                </span>
-            </div>
-
             {/* Filter Bar */}
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-wrap rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3 min-w-0">
                 <div className="flex items-center gap-1.5 text-sm font-medium text-[var(--color-text-secondary)]">
@@ -301,12 +309,34 @@ export function ProjectsView() {
                 <div className="relative flex-1 min-w-[180px]">
                     <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--color-text-muted)]" />
                     <Input
-                        placeholder="بحث بالاسم..."
+                        placeholder="بحث بالاسم أو الموقع..."
                         value={localSearch}
                         onChange={(e) => handleSearchChange(e.target.value)}
                         className="pr-9 h-9 text-sm"
                     />
                 </div>
+
+                {/* Type filter */}
+                <Select
+                    value={typeFilter}
+                    onValueChange={(v) => setParam("type", v)}
+                >
+                    <SelectTrigger className="w-full sm:w-[180px] h-9 text-sm">
+                        <SelectValue placeholder="نوع المشروع" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {(
+                            Object.entries(TYPE_FILTER_LABELS) as [
+                                TypeFilter,
+                                string,
+                            ][]
+                        ).map(([key, label]) => (
+                            <SelectItem key={key} value={key}>
+                                {label}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
 
                 {/* Performance filter */}
                 <Select
@@ -424,6 +454,14 @@ export function ProjectsView() {
                             </button>
                         </Badge>
                     )}
+                    {typeFilter !== "all" && (
+                        <Badge variant="secondary" className="gap-1">
+                            النوع: {TYPE_FILTER_LABELS[typeFilter]}
+                            <button onClick={() => setParam("type", "all")} className="cursor-pointer">
+                                <X className="h-3 w-3" />
+                            </button>
+                        </Badge>
+                    )}
                     {perfFilter !== "all" && (
                         <Badge variant="secondary" className="gap-1">
                             الأداء: {PERF_FILTER_LABELS[perfFilter]}
@@ -521,18 +559,9 @@ export function ProjectsView() {
                     {paginatedProjects.map((project) => (
                         <Card
                             key={project.id}
-                            className="relative cursor-pointer transition-all duration-200 hover:scale-[1.02] hover:border-white/30 hover:shadow-md"
-                            onClick={() => {
-                                toast.error(
-                                    "هذا المشروع غير متاح حاليًا. يرجى التواصل مع الإدارة للحصول على صلاحية الوصول.",
-                                );
-                            }}
+                            className="relative cursor-pointer transition-all duration-200 hover:scale-[1.02] hover:border-[var(--color-primary)]/40 hover:shadow-md"
+                            onClick={() => navigate(getProjectDetailPath(project.id))}
                         >
-                            {/* Lock icon */}
-                            <div className="absolute top-3 start-3">
-                                <Lock className="h-4 w-4 text-[var(--color-text-muted)]" />
-                            </div>
-
                             <CardHeader className="pb-2">
                                 <CardTitle className="text-base">
                                     {project.name}
@@ -540,6 +569,21 @@ export function ProjectsView() {
                                 <p className="text-xs text-[var(--color-text-muted)] mt-1 leading-relaxed">
                                     {project.description}
                                 </p>
+                                <div className="flex flex-wrap items-center gap-2 mt-2 text-[11px] text-[var(--color-text-secondary)]">
+                                    <span className="inline-flex items-center gap-1">
+                                        <Building2 className="h-3 w-3" />
+                                        {PROJECT_TYPE_META[project.type].typeLabel}
+                                    </span>
+                                    <span className="text-[var(--color-border)]">•</span>
+                                    <span className="inline-flex items-center gap-1">
+                                        <MapPin className="h-3 w-3" />
+                                        {project.location}
+                                    </span>
+                                    <span className="text-[var(--color-border)]">•</span>
+                                    <span className="tabular-nums">
+                                        {project.unitCount} {project.unitType}
+                                    </span>
+                                </div>
                             </CardHeader>
 
                             <CardContent className="space-y-4">

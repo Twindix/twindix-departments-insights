@@ -2,7 +2,7 @@ export { LoginView } from "./auth/login";
 export { DashboardView } from "./dashboard";
 export { HrDepartmentView } from "./departments/hr/sections";
 export { HrPerformanceView } from "./departments/hr";
-export { ProjectsView } from "./departments/projects";
+export { ProjectsView, ProjectPlaceholderView } from "./departments/projects";
 export { FinanceView } from "./departments/finance";
 export { EmployeeProfileView } from "./employees/profile";
 export { EmployeeInsightsView } from "./employees/insights";

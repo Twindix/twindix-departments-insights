@@ -7,3 +7,5 @@ export { seedEmployeeInsights, SHARED_CORE_COMPETENCIES } from "./employee-insig
 export { seedEmployeeCvs } from "./employee-cv";
 export { seedProjects } from "./projects";
 export type { ProjectInterface } from "./projects";
+export { PROJECT_TYPE_META, PROJECT_NAMES_BY_TYPE, SAUDI_LOCATIONS } from "./project-names";
+export { seededRandom, hashStringSeed } from "./prng";

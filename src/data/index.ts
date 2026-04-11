@@ -5,6 +5,14 @@ export {
     DEMO_EMAIL,
     DEMO_PASSWORD,
 } from "./common";
-export { routesData, getEmployeeProfilePath, getEmployeeInsightsPath } from "./routes";
+export {
+    routesData,
+    getEmployeeProfilePath,
+    getEmployeeInsightsPath,
+    getProjectDetailPath,
+    getProjectCostPath,
+    getProjectQualityPath,
+    getProjectTimePath,
+} from "./routes";
 export { sidebarItems } from "./sidebar";
 export type { SidebarItem } from "./sidebar";

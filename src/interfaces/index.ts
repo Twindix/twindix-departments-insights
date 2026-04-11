@@ -27,3 +27,9 @@ export type {
     CourseInterface,
     EmployeeCvInterface,
 } from "./cv";
+
+export type {
+    ProjectType,
+    ProjectStatus,
+    ProjectInterface,
+} from "./project";
