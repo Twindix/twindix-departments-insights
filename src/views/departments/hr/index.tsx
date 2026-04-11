@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Eye, Filter, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search, X, Loader2, CalendarDays, Users, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowLeft, Eye, Filter, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search, X, Loader2, CalendarDays, Users, ChevronDown } from "lucide-react";
 import { Header, ProgressBar, DataTable, DatePicker, EmptyState, BarChart, type SortState, type SortDirection } from "@/components/shared";
 import { useDeferredLoad, usePageTitle } from "@/hooks";
 import { Button, Input, Badge, Card, CardContent } from "@/atoms";
@@ -890,8 +890,11 @@ export function HrPerformanceView() {
                         className="flex w-full items-center justify-between gap-3 cursor-pointer text-start"
                     >
                         <div className="flex items-center gap-3 min-w-0">
-                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--color-surface)] text-[var(--color-text-muted)] transition-transform duration-300" style={{ transform: overviewCollapsed ? "rotate(0deg)" : "rotate(180deg)" }}>
-                                {overviewCollapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--color-surface)] text-[var(--color-text-muted)]">
+                                <ChevronDown
+                                    className="h-4 w-4 transition-transform duration-300 ease-out"
+                                    style={{ transform: overviewCollapsed ? "rotate(0deg)" : "rotate(180deg)" }}
+                                />
                             </div>
                             <div className="min-w-0">
                                 <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
